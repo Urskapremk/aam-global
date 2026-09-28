@@ -17,10 +17,15 @@ export async function uploadImage(formData: FormData) {
   const ext = file.name.split('.').pop() || 'jpg'
   const key = `aam/${crypto.randomUUID()}.${ext}`
 
-  const blob = await put(key, file, {
-    access: 'public',
-    addRandomSuffix: false,
-  })
-
-  return { url: blob.url }
+  try {
+    const blob = await put(key, file, {
+      access: 'public',
+      addRandomSuffix: false,
+      contentType: file.type,
+    })
+    return { url: blob.url }
+  } catch (err) {
+    console.error('Blob upload failed:', err)
+    return { error: 'Nalaganje v shrambo ni uspelo. Poskusite znova.' }
+  }
 }

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Upload, X, Loader2, ClipboardPaste } from 'lucide-react'
 import { uploadImage } from '@/app/actions/upload'
+import { shrinkImageToDataUrl, dataUrlToFile } from '@/lib/image-client'
 
 function imageFromClipboardData(data: DataTransfer | null): File | null {
   if (!data) return null
@@ -43,12 +44,24 @@ export function ImageUpload({
     setError(null)
     setUploading(true)
     try {
+      // Screenshots are multi-MB PNGs; Server Action bodies are capped, so
+      // shrink to a JPEG first. GIF/SVG are kept as-is (animation/vector).
+      let toSend = file
+      if (!/image\/(gif|svg)/.test(file.type)) {
+        try {
+          const dataUrl = await shrinkImageToDataUrl(file, 1920, 0.85)
+          toSend = dataUrlToFile(dataUrl, `${file.name.replace(/\.[^.]+$/, '')}.jpg`)
+        } catch {
+          toSend = file
+        }
+      }
       const fd = new FormData()
-      fd.append('file', file)
+      fd.append('file', toSend)
       const res = await uploadImage(fd)
       if (res.error) setError(res.error)
       else if (res.url) onChange(res.url)
-    } catch {
+    } catch (err) {
+      console.error('Image upload failed:', err)
       setError('Nalaganje ni uspelo.')
     } finally {
       uploadingRef.current = false
