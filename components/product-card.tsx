@@ -1,0 +1,47 @@
+'use client'
+
+import { Plus } from 'lucide-react'
+import { useCart } from '@/components/cart-context'
+import { formatEur, type Product } from '@/lib/products'
+
+export function ProductCard({ product }: { product: Product }) {
+  const { addItem } = useCart()
+
+  return (
+    <article className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-accent/40 hover:shadow-lg hover:shadow-primary/5">
+      <div className="relative aspect-square overflow-hidden bg-secondary">
+        <img
+          src={product.image || '/placeholder.svg'}
+          alt={product.alt}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+        <span className="absolute left-3 top-3 rounded-full bg-background/90 px-3 py-1 text-xs font-medium tracking-wide text-muted-foreground backdrop-blur">
+          {product.category}
+        </span>
+      </div>
+
+      <div className="flex flex-1 flex-col p-5">
+        <h3 className="font-serif text-lg font-medium leading-snug text-foreground">
+          {product.name}
+        </h3>
+        <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+          {product.description}
+        </p>
+
+        <div className="mt-4 flex items-center justify-between pt-1">
+          <span className="font-serif text-xl font-medium tabular-nums text-foreground">
+            {formatEur(product.price)}
+          </span>
+          <button
+            type="button"
+            onClick={() => addItem(product.id)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4" />
+            Add
+          </button>
+        </div>
+      </div>
+    </article>
+  )
+}

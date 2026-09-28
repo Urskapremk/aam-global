@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="AAM app icon">
+  <defs>
+    <linearGradient id="navy" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22355a"/>
+      <stop offset="0.55" stop-color="#1c2d4c"/>
+      <stop offset="1" stop-color="#16233c"/>
+    </linearGradient>
+    <linearGradient id="silver" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4f6f8"/>
+      <stop offset="0.35" stop-color="#c8ced6"/>
+      <stop offset="0.55" stop-color="#9aa3ad"/>
+      <stop offset="0.75" stop-color="#d6dce2"/>
+      <stop offset="1" stop-color="#aeb6bf"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="0.5" cy="0.36" r="0.75">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.10"/>
+      <stop offset="0.6" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- base navy tile -->
+  <rect x="0" y="0" width="1024" height="1024" rx="224" fill="url(#navy)"/>
+  <rect x="0" y="0" width="1024" height="1024" rx="224" fill="url(#sheen)"/>
+
+  <!-- silver inset border -->
+  <rect x="40" y="40" width="944" height="944" rx="190" fill="none" stroke="url(#silver)" stroke-width="14"/>
+
+  <!-- emblem group: anchor + AAM -->
+  <g fill="url(#silver)">
+    <!-- anchor -->
+    <g transform="translate(258,544) scale(0.82)">
+      <circle cx="0" cy="-104" r="20" fill="none" stroke="url(#silver)" stroke-width="14"/>
+      <rect x="-7" y="-86" width="14" height="150" rx="6"/>
+      <rect x="-52" y="-72" width="104" height="14" rx="7"/>
+      <path d="M -70 6 A 70 70 0 0 0 -6 62 L -6 44 A 52 52 0 0 1 -52 2 Z"/>
+      <path d="M 70 6 A 70 70 0 0 1 6 62 L 6 44 A 52 52 0 0 0 52 2 Z"/>
+      <path d="M -70 6 L -92 2 L -74 30 Z"/>
+      <path d="M 70 6 L 92 2 L 74 30 Z"/>
+    </g>
+
+    <!-- AAM wordmark -->
+    <text x="655" y="512" font-family="Georgia, 'Times New Roman', serif" font-size="212" letter-spacing="22" text-anchor="middle" dominant-baseline="central">AAM</text>
+  </g>
+</svg>
