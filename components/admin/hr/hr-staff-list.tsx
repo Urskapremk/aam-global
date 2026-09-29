@@ -15,6 +15,7 @@ import {
   primaryButtonClass,
   useHrStaff,
 } from './hr-shared'
+import { HrStaffDocuments } from './hr-staff-documents'
 
 function roleTone(role: HrStaff['role']) {
   if (role === 'captain') return { fg: '#1f6f96', bg: '#1f6f9622', label: 'Captain' }
@@ -152,6 +153,7 @@ function StaffCard({ staff, onSaved }: { staff: HrStaff; onSaved: () => void }) 
               </label>
             ))}
           </div>
+          <HrStaffDocuments staffId={staff.id} />
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-[11px] text-muted-foreground">
               {staff.source === 'crew'

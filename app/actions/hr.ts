@@ -121,6 +121,17 @@ function ensureTables(): Promise<void> {
           "otherDeductions" double precision NOT NULL DEFAULT 0,
           PRIMARY KEY ("staffId", month)
         );
+        CREATE TABLE IF NOT EXISTS hr_documents (
+          id text PRIMARY KEY,
+          "staffId" text NOT NULL REFERENCES hr_staff(id) ON DELETE CASCADE,
+          kind text NOT NULL DEFAULT 'other',
+          name text NOT NULL DEFAULT '',
+          url text NOT NULL,
+          pathname text NOT NULL,
+          access text NOT NULL DEFAULT 'private',
+          "contentType" text NOT NULL DEFAULT '',
+          "createdAt" timestamptz NOT NULL DEFAULT now()
+        );
       `)
     })().catch((e) => {
       ensured = null
