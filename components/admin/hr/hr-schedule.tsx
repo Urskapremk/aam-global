@@ -1,7 +1,8 @@
 'use client'
 
-import { ChevronLeft, ChevronRight, Plus, Printer, Settings2, Trash2, Wallet, Wand2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ClipboardList, Plus, Printer, Settings2, Trash2, Wallet, Wand2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { flushSync } from 'react-dom'
 import useSWR from 'swr'
 
 import { getHrLeave, type HrStaff } from '@/app/actions/hr'
@@ -68,6 +69,12 @@ export function HrSchedule() {
   const [view, setView] = useState<'person' | 'shift'>('person')
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [printMode, setPrintMode] = useState<'schedule' | 'attendance'>('schedule')
+
+  function printAs(mode: 'schedule' | 'attendance') {
+    flushSync(() => setPrintMode(mode))
+    window.print()
+  }
 
   const group = groups?.find((g) => g.id === groupId) ?? groups?.[0] ?? null
 
@@ -188,7 +195,9 @@ export function HrSchedule() {
           .hr-print-root { position: absolute; inset: 0; background: #fff !important; color: #111 !important; padding: 0; }
           .hr-print-root * { color: #111 !important; border-color: #bbb !important; background: transparent !important; }
           .hr-print-root button { pointer-events: none; }
-          @page { size: A4 landscape; margin: 8mm; }
+          .hr-att-page { break-after: page; page-break-after: always; }
+          .hr-att-page:last-child { break-after: auto; page-break-after: auto; }
+          @page { size: A4 ${printMode === 'attendance' ? 'portrait' : 'landscape'}; margin: ${printMode === 'attendance' ? '12mm' : '8mm'}; }
         }
       `}</style>
 
@@ -310,11 +319,20 @@ export function HrSchedule() {
               </button>
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={() => printAs('schedule')}
                 className="inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full border border-border bg-card px-4 text-xs font-medium uppercase tracking-[0.1em] text-foreground transition hover:border-accent"
               >
                 <Printer className="h-4 w-4" aria-hidden />
                 {t('Print')}
+              </button>
+              <button
+                type="button"
+                onClick={() => printAs('attendance')}
+                disabled={members.length === 0}
+                className="inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full border border-border bg-card px-4 text-xs font-medium uppercase tracking-[0.1em] text-foreground transition hover:border-accent disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ClipboardList className="h-4 w-4" aria-hidden />
+                {t('Attendance sheet')}
               </button>
               <button
                 type="button"
@@ -346,7 +364,7 @@ export function HrSchedule() {
               {t('No workers in this schedule yet — add them under Edit schedule.')}
             </div>
           ) : (
-            <div className="hr-print-root">
+            <div className={`hr-print-root ${printMode === 'attendance' ? 'print:hidden' : ''}`}>
               <h2 className="mb-2 hidden text-base font-semibold print:block">
                 {group.name} — <span className="capitalize">{monthLabel}</span>
               </h2>
@@ -453,6 +471,74 @@ export function HrSchedule() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+
+          {members.length > 0 && printMode === 'attendance' && (
+            <div className="hr-print-root hidden print:block">
+              {members.map((m) => {
+                const summary = hours.find((h) => h.staffId === m.id)
+                return (
+                  <section key={m.id} className="hr-att-page text-[11px]">
+                    <header className="mb-3 flex items-end justify-between border-b pb-2">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.15em]">{t('Attendance sheet')}</p>
+                        <p className="text-base font-semibold">{m.name}</p>
+                        <p>{m.position || '—'}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">{group.name}</p>
+                        <p className="capitalize">{monthLabel}</p>
+                      </div>
+                    </header>
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr>
+                          <th className="border px-1.5 py-1 text-left font-medium">{t('Day')}</th>
+                          <th className="border px-1.5 py-1 text-left font-medium">{t('Planned shift')}</th>
+                          <th className="w-16 border px-1.5 py-1 text-left font-medium">{t('Arrival')}</th>
+                          <th className="w-16 border px-1.5 py-1 text-left font-medium">{t('Departure')}</th>
+                          <th className="w-12 border px-1.5 py-1 text-left font-medium">{t('Hours')}</th>
+                          <th className="w-40 border px-1.5 py-1 text-left font-medium">{t('Signature')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dates.map((iso) => {
+                          const wd = weekday(iso)
+                          const holiday = holidayName(iso)
+                          const lv = leaveOn(m.id, iso)
+                          const code = cellMap.get(`${m.id}|${iso}`) ?? OFF
+                          const s = shiftByCode.get(code)
+                          const planned = lv
+                            ? t(LEAVE_LABELS[lv.kind as LeaveKind] ?? 'Leave')
+                            : s
+                              ? `${s.label} · ${fmtHours(s.hours)} h`
+                              : t('Off')
+                          return (
+                            <tr key={iso} className="h-[22px]">
+                              <td className={`whitespace-nowrap border px-1.5 ${wd === 0 || holiday ? 'font-semibold' : ''}`}>
+                                {DAY_NAMES[lang][wd]} {Number(iso.slice(8, 10))}.{holiday ? ` · ${holiday}` : ''}
+                              </td>
+                              <td className="border px-1.5">{planned}</td>
+                              <td className="border" />
+                              <td className="border" />
+                              <td className="border" />
+                              <td className="border" />
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                    <p className="mt-2">
+                      {t('Planned')}: {summary?.shifts ?? 0} {t('Shifts').toLowerCase()} · {fmtHours(summary?.total ?? 0)} h
+                    </p>
+                    <div className="mt-10 flex justify-between gap-10">
+                      <div className="flex-1 border-t pt-1 text-center">{t('Worker signature')}</div>
+                      <div className="flex-1 border-t pt-1 text-center">{t('Manager signature')}</div>
+                    </div>
+                  </section>
+                )
+              })}
             </div>
           )}
 
