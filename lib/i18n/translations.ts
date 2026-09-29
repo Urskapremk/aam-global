@@ -560,6 +560,40 @@ export const SL: Record<string, string> = {
     'Prekličem to povezavo? Ta telefon bo prenehal poročati.',
   Revoke: 'Prekliči',
 
+  // HR work schedules
+  'Work schedules': 'Razporedi delavcev',
+  'New schedule': 'Nov razpored',
+  'Edit schedule': 'Uredi razpored',
+  'Delete schedule': 'Izbriši razpored',
+  'Schedule name': 'Ime razporeda',
+  'e.g. Odyssey crew': 'npr. Posadka Odyssey',
+  'Shift name': 'Ime smene',
+  'Add shift': 'Dodaj smeno',
+  'Workers in this schedule': 'Delavci v razporedu',
+  'Add workers in the staff list first.': 'Najprej dodajte delavce v seznam osebja.',
+  'Enter a schedule name.': 'Vpišite ime razporeda.',
+  'Add at least one shift.': 'Dodajte vsaj eno smeno.',
+  'Delete this schedule and all its months?': 'Izbrišem ta razpored in vse njegove mesece?',
+  'Morning 6-12:30': 'Dopoldan 6-12:30',
+  'Afternoon 12-18:30': 'Popoldan 12-18:30',
+  'No schedules yet.': 'Ni še razporedov.',
+  'Create a schedule (e.g. Odyssey crew, office), choose its shifts and workers.':
+    'Ustvarite razpored (npr. posadka Odyssey, pisarna) ter izberite smene in delavce.',
+  'By person': 'Po osebah',
+  'By shift': 'Po smenah',
+  'Generate month (6+1)': 'Ustvari mesec (6+1)',
+  'Overwrite the whole month with a new rotation?': 'Prepišem cel mesec z novo rotacijo?',
+  'Click a cell to change the shift.': 'Klik na celico zamenja smeno.',
+  'No workers in this schedule yet — add them under Edit schedule.':
+    'V razporedu še ni delavcev — dodajte jih pod Uredi razpored.',
+  'Hours this month': 'Ure v mesecu',
+  'Total hours': 'Skupaj ur',
+  'Send hours to payroll': 'Prenesi ure v obračun plač',
+  'Write Sunday and holiday hours of this month into Payroll MG?':
+    'Zapišem nedeljske in praznične ure tega meseca v Obračun plač MG?',
+  'Hours sent to payroll': 'Ure prenesene v obračun',
+  leave: 'dopust',
+
   // Trip track panel
   'Drawing the route…': 'Rišem pot…',
   'Loading the track…': 'Nalagam sled…',

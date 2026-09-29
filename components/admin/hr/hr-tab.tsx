@@ -1,6 +1,6 @@
 'use client'
 
-import { BookOpen, CalendarDays, FileSignature, FileText, Users, Wallet, type LucideIcon } from 'lucide-react'
+import { BookOpen, CalendarClock, CalendarDays, FileSignature, FileText, Users, Wallet, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 
 import { useT } from '@/lib/i18n/context'
@@ -10,12 +10,14 @@ import { HrLeave } from './hr-leave'
 import { HrPayrollMg } from './hr-payroll-mg'
 import { HrRecords } from './hr-records'
 import { HrRegister } from './hr-register'
+import { HrSchedule } from './hr-schedule'
 import { HrStaffList } from './hr-staff-list'
 
-type View = 'staff' | 'payroll' | 'contracts' | 'leave' | 'records' | 'register'
+type View = 'staff' | 'schedule' | 'payroll' | 'contracts' | 'leave' | 'records' | 'register'
 
 const VIEWS: { id: View; label: string; icon: LucideIcon }[] = [
   { id: 'staff', label: 'Staff list', icon: Users },
+  { id: 'schedule', label: 'Work schedules', icon: CalendarClock },
   { id: 'payroll', label: 'Payroll MG', icon: Wallet },
   { id: 'contracts', label: 'Contracts', icon: FileSignature },
   { id: 'leave', label: 'Leave', icon: CalendarDays },
@@ -53,6 +55,7 @@ export function HrTab() {
       </nav>
 
       {view === 'staff' && <HrStaffList />}
+      {view === 'schedule' && <HrSchedule />}
       {view === 'payroll' && <HrPayrollMg />}
       {view === 'contracts' && <HrContracts />}
       {view === 'leave' && <HrLeave />}
