@@ -2,7 +2,8 @@
 
 import { type ReactNode } from 'react'
 import Link from 'next/link'
-import { Anchor, LogOut, ExternalLink } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { Anchor, ArrowLeft, LogOut, ExternalLink } from 'lucide-react'
 import { logoutAction } from '@/app/actions/admin-auth'
 import { AdminNotifier } from '@/components/admin/admin-notifier'
 import { PushEnableButton } from '@/components/admin/push-enable-button'
@@ -11,6 +12,8 @@ import { cn } from '@/lib/utils'
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const { lang, setLang, t } = useLang()
+  const pathname = usePathname()
+  const isHome = pathname === '/admin' || pathname === '/admin/'
 
   // Fixed admin look: navy sidebar (brand chrome) + a warm sandy page
   // background. There is no dark mode here — nothing in the app sets the `.dark`
@@ -108,6 +111,15 @@ export function AdminShell({ children }: { children: ReactNode }) {
       {/* pb keeps the last row clear of the fixed "Enable phone alerts" button
           pinned to the bottom-right, plus the iPhone home-indicator inset. */}
       <main className="min-w-0 flex-1 overflow-x-hidden p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:p-5 sm:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:p-8 lg:pb-[calc(7rem+env(safe-area-inset-bottom))]">
+        {!isHome && (
+          <Link
+            href="/admin"
+            className="mb-4 inline-flex min-h-10 items-center gap-2 rounded-lg bg-panel-header px-4 py-2 text-sm font-medium text-panel-header-foreground transition-opacity hover:opacity-90"
+          >
+            <ArrowLeft className="h-4 w-4" strokeWidth={1.75} />
+            {t('Command centre')}
+          </Link>
+        )}
         {children}
       </main>
     </div>
