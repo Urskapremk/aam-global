@@ -134,14 +134,21 @@ export function HrSchedule() {
     )
   }
 
-  async function handleGenerate() {
+  const [genOpen, setGenOpen] = useState(false)
+  const [sundayOffIds, setSundayOffIds] = useState<string[]>([])
+
+  function handleGenerate() {
     if (!group || members.length === 0) return
-    if ((cells ?? []).length > 0 && !confirm(t('Overwrite the whole month with a new rotation?'))) return
     const fixed = group.fixedShifts ?? {}
-    const sundayOff = new Set<string>()
-    for (const m of members) {
-      if (fixed[m.id] && confirm(`${m.name}: ${t('Is this worker off on Sundays?')}`)) sundayOff.add(m.id)
-    }
+    setSundayOffIds(members.filter((m) => fixed[m.id]).map((m) => m.id))
+    setGenOpen(true)
+  }
+
+  async function runGenerate() {
+    if (!group || members.length === 0) return
+    const fixed = group.fixedShifts ?? {}
+    const sundayOff = new Set(sundayOffIds)
+    setGenOpen(false)
     setBusy(true)
     try {
       const generated = generateMonth(
@@ -275,6 +282,61 @@ export function HrSchedule() {
 
       {group && (
         <>
+          {genOpen && (
+            <div
+              role="dialog"
+              aria-label={t('Generate month (6+1)')}
+              className="rounded-2xl border border-accent/40 bg-card p-5 print:hidden"
+            >
+              <p className="text-sm font-medium text-foreground">{t('Who is off every Sunday?')}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t('Checked workers get every Sunday off. Others follow the normal 6+1 rotation.')}
+              </p>
+              <ul className="mt-4 flex flex-wrap gap-2">
+                {members.map((m) => {
+                  const checked = sundayOffIds.includes(m.id)
+                  return (
+                    <li key={m.id}>
+                      <label
+                        className={`flex min-h-10 cursor-pointer items-center gap-2 rounded-full border px-4 text-xs transition ${
+                          checked ? 'border-accent bg-accent/15 text-accent' : 'border-border text-muted-foreground'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="accent-[var(--accent)]"
+                          checked={checked}
+                          onChange={(e) =>
+                            setSundayOffIds((ids) =>
+                              e.target.checked ? [...ids, m.id] : ids.filter((id) => id !== m.id),
+                            )
+                          }
+                        />
+                        {m.name}
+                      </label>
+                    </li>
+                  )
+                })}
+              </ul>
+              {(cells ?? []).length > 0 && (
+                <p className="mt-4 text-xs text-amber-400">{t('Overwrite the whole month with a new rotation?')}</p>
+              )}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button type="button" onClick={runGenerate} disabled={busy} className={primaryButtonClass}>
+                  <Wand2 className="h-4 w-4" aria-hidden />
+                  {t('Generate')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGenOpen(false)}
+                  className="inline-flex min-h-10 cursor-pointer items-center rounded-full border border-border px-4 text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground hover:text-foreground"
+                >
+                  {t('Cancel')}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Toolbar */}
           <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
             <div className="flex items-center gap-1">
