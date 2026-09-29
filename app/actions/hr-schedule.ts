@@ -34,6 +34,7 @@ function ensureTables(): Promise<void> {
           shift text NOT NULL,
           PRIMARY KEY ("groupId", "staffId", date)
         );
+        ALTER TABLE hr_schedule_groups ADD COLUMN IF NOT EXISTS "fixedShifts" jsonb NOT NULL DEFAULT '{}'::jsonb;
       `)
     })().catch((e) => {
       ensured = null
@@ -76,6 +77,8 @@ export async function getScheduleGroups(): Promise<ScheduleGroup[]> {
     name: r.name,
     shifts: Array.isArray(r.shifts) ? r.shifts : [],
     memberIds: Array.isArray(r.memberIds) ? r.memberIds : [],
+    fixedShifts:
+      r.fixedShifts && typeof r.fixedShifts === 'object' && !Array.isArray(r.fixedShifts) ? r.fixedShifts : {},
   }))
 }
 
@@ -84,6 +87,7 @@ export async function saveScheduleGroup(input: {
   name: string
   shifts: ScheduleShift[]
   memberIds: string[]
+  fixedShifts?: Record<string, string>
 }): Promise<{ id: string }> {
   await guard()
   const name = input.name.trim().slice(0, 80)
@@ -91,11 +95,16 @@ export async function saveScheduleGroup(input: {
   const shifts = cleanShifts(input.shifts)
   if (shifts.length === 0) throw new Error('At least one shift is required')
   const memberIds = [...new Set(input.memberIds.map(String))].slice(0, 60)
+  const codes = new Set(shifts.map((s) => s.code))
+  const fixedShifts: Record<string, string> = {}
+  for (const [staffId, code] of Object.entries(input.fixedShifts ?? {})) {
+    if (memberIds.includes(staffId) && codes.has(String(code))) fixedShifts[staffId] = String(code)
+  }
   const id = input.id || `sg-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
   await pool.query(
-    `INSERT INTO hr_schedule_groups (id, name, shifts, "memberIds") VALUES ($1, $2, $3::jsonb, $4::jsonb)
-     ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, shifts = EXCLUDED.shifts, "memberIds" = EXCLUDED."memberIds"`,
-    [id, name, JSON.stringify(shifts), JSON.stringify(memberIds)],
+    `INSERT INTO hr_schedule_groups (id, name, shifts, "memberIds", "fixedShifts") VALUES ($1, $2, $3::jsonb, $4::jsonb, $5::jsonb)
+     ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, shifts = EXCLUDED.shifts, "memberIds" = EXCLUDED."memberIds", "fixedShifts" = EXCLUDED."fixedShifts"`,
+    [id, name, JSON.stringify(shifts), JSON.stringify(memberIds), JSON.stringify(fixedShifts)],
   )
   // Cells whose shift no longer exists become OFF.
   await pool.query(

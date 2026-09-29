@@ -15,6 +15,8 @@ export type ScheduleGroup = {
   name: string
   shifts: ScheduleShift[]
   memberIds: string[]
+  /** staffId → shift code for workers who never rotate (e.g. housekeeper mornings only). */
+  fixedShifts: Record<string, string>
 }
 
 export type ScheduleCell = { staffId: string; date: string; shift: string }
@@ -122,9 +124,11 @@ export function generateMonth(
   memberIds: string[],
   shifts: ScheduleShift[],
   isOnLeave: (staffId: string, iso: string) => boolean,
+  fixedShifts: Record<string, string> = {},
 ): ScheduleCell[] {
   const cells: ScheduleCell[] = []
   if (shifts.length === 0) return cells
+  const codes = new Set(shifts.map((s) => s.code))
   const [y, m] = month.split('-').map(Number)
   for (const iso of monthDates(month)) {
     const d = Number(iso.slice(8, 10))
@@ -134,6 +138,7 @@ export function generateMonth(
       let shift: string
       if (isOnLeave(staffId, iso)) shift = OFF
       else if ((globalDay + idx) % 7 === 6) shift = OFF
+      else if (codes.has(fixedShifts[staffId])) shift = fixedShifts[staffId]
       else shift = shifts[(idx + week) % shifts.length].code
       cells.push({ staffId, date: iso, shift })
     })

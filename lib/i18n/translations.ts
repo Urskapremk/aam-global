@@ -575,7 +575,12 @@ export const SL: Record<string, string> = {
   'e.g. Odyssey crew': 'npr. Posadka Odyssey',
   'Shift name': 'Ime smene',
   'Add shift': 'Dodaj smeno',
-  'Workers in this schedule': 'Delavci v razporedu',
+    'Workers in this schedule': 'Delavci v razporedu',
+    'Shift pattern per worker': 'Izmene po delavcu',
+    'Rotating workers change shifts weekly. A fixed worker always gets the same shift (e.g. housekeeper — mornings only).':
+      'Delavci z menjavo izmen se menjajo tedensko. Delavec s stalno izmeno ima vedno isto izmeno (npr. sobarica — samo dopoldan).',
+    Rotates: 'Menjava izmen',
+    Only: 'Samo',
   'Add workers in the staff list first.': 'Najprej dodajte delavce v seznam osebja.',
   'Enter a schedule name.': 'Vpišite ime razporeda.',
   'Add at least one shift.': 'Dodajte vsaj eno smeno.',

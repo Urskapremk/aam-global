@@ -144,6 +144,7 @@ export function HrSchedule() {
         members.map((m) => m.id),
         group.shifts,
         (id, iso) => !!leaveOn(id, iso),
+        group.fixedShifts ?? {},
       )
       await replaceScheduleMonth(group.id, month, generated)
       await mutateCells(generated, { revalidate: false })
@@ -431,7 +432,12 @@ export function HrSchedule() {
                                           s ? SHIFT_CLASSES[s.color] : OFF_CLASS
                                         }`}
                                       >
-                                        {group.shifts.map((sh) => (
+                                        {group.shifts
+                                          .filter((sh) => {
+                                            const fixed = group.fixedShifts?.[m.id]
+                                            return !fixed || !shiftByCode.has(fixed) || sh.code === fixed || sh.code === code
+                                          })
+                                          .map((sh) => (
                                           <option key={sh.code} value={sh.code} className="bg-background text-foreground">
                                             {sh.label}
                                           </option>
@@ -611,6 +617,7 @@ function GroupEditor({
   const [memberIds, setMemberIds] = useState<string[]>(
     initial?.memberIds ?? staff.filter((s) => s.active && isSchedulable(s)).map((s) => s.id),
   )
+  const [fixedShifts, setFixedShifts] = useState<Record<string, string>>(initial?.fixedShifts ?? {})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -635,7 +642,7 @@ function GroupEditor({
     if (shifts.length === 0) return setError(t('Add at least one shift.'))
     setSaving(true)
     try {
-      const res = await saveScheduleGroup({ id: initial?.id, name, shifts, memberIds })
+      const res = await saveScheduleGroup({ id: initial?.id, name, shifts, memberIds, fixedShifts })
       await onSaved(res.id)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -762,6 +769,50 @@ function GroupEditor({
               )}
             </div>
           </fieldset>
+
+          {memberIds.length > 0 && shifts.length > 1 && (
+            <fieldset>
+              <legend className={labelClass}>{t('Shift pattern per worker')}</legend>
+              <p className="mb-3 text-xs text-muted-foreground">
+                {t('Rotating workers change shifts weekly. A fixed worker always gets the same shift (e.g. housekeeper — mornings only).')}
+              </p>
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {memberIds.map((id) => {
+                  const person = staff.find((s) => s.id === id)
+                  if (!person) return null
+                  const value = shifts.some((s) => s.code === fixedShifts[id]) ? fixedShifts[id] : ''
+                  return (
+                    <li key={id} className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2">
+                      <span className="min-w-0 truncate text-xs text-foreground">
+                        {person.name}
+                        {person.position ? <span className="text-muted-foreground"> · {person.position}</span> : null}
+                      </span>
+                      <select
+                        aria-label={`${person.name} — ${t('Shift pattern per worker')}`}
+                        value={value}
+                        onChange={(e) =>
+                          setFixedShifts((map) => {
+                            const next = { ...map }
+                            if (e.target.value) next[id] = e.target.value
+                            else delete next[id]
+                            return next
+                          })
+                        }
+                        className={`${inputClass} w-auto min-w-40`}
+                      >
+                        <option value="">{t('Rotates')}</option>
+                        {shifts.map((s) => (
+                          <option key={s.code} value={s.code}>
+                            {t('Only')}: {s.label}
+                          </option>
+                        ))}
+                      </select>
+                    </li>
+                  )
+                })}
+              </ul>
+            </fieldset>
+          )}
 
           {error && <p className="text-xs text-destructive">{error}</p>}
 
