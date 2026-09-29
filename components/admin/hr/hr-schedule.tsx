@@ -141,6 +141,7 @@ export function HrSchedule() {
     if (!group || members.length === 0) return
     const fixed = group.fixedShifts ?? {}
     setSundayOffIds(members.filter((m) => fixed[m.id]).map((m) => m.id))
+    setEditing(null)
     setGenOpen(true)
   }
 
@@ -284,9 +285,16 @@ export function HrSchedule() {
         <>
           {genOpen && (
             <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 print:hidden"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setGenOpen(false)
+              }}
+            >
+            <div
               role="dialog"
+              aria-modal="true"
               aria-label={t('Generate month (6+1)')}
-              className="rounded-2xl border border-accent/40 bg-card p-5 print:hidden"
+              className="w-full max-w-lg rounded-2xl border border-accent/40 bg-card p-6 shadow-2xl"
             >
               <p className="text-sm font-medium text-foreground">{t('Who is off every Sunday?')}</p>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -334,6 +342,7 @@ export function HrSchedule() {
                   {t('Cancel')}
                 </button>
               </div>
+            </div>
             </div>
           )}
 
