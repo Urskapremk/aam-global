@@ -127,6 +127,7 @@ export function generateMonth(
   shifts: ScheduleShift[],
   isOnLeave: (staffId: string, iso: string) => boolean,
   fixedShifts: Record<string, string> = {},
+  sundayOff: Set<string> = new Set(),
 ): ScheduleCell[] {
   const cells: ScheduleCell[] = []
   if (shifts.length === 0) return cells
@@ -141,7 +142,11 @@ export function generateMonth(
     memberIds.forEach((staffId, idx) => {
       let shift: string
       if (isOnLeave(staffId, iso)) shift = OFF
-      else if ((globalDay + idx) % 7 === 6) shift = OFF
+      else if (sundayOff.has(staffId)) {
+        if (weekday(iso) === 0) shift = OFF
+        else if (codes.has(fixedShifts[staffId])) shift = fixedShifts[staffId]
+        else shift = pool[(idx + week) % pool.length].code
+      } else if ((globalDay + idx) % 7 === 6) shift = OFF
       else if (codes.has(fixedShifts[staffId])) shift = fixedShifts[staffId]
       else shift = pool[(idx + week) % pool.length].code
       cells.push({ staffId, date: iso, shift })

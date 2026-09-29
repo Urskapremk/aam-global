@@ -137,6 +137,11 @@ export function HrSchedule() {
   async function handleGenerate() {
     if (!group || members.length === 0) return
     if ((cells ?? []).length > 0 && !confirm(t('Overwrite the whole month with a new rotation?'))) return
+    const fixed = group.fixedShifts ?? {}
+    const sundayOff = new Set<string>()
+    for (const m of members) {
+      if (fixed[m.id] && confirm(`${m.name}: ${t('Is this worker off on Sundays?')}`)) sundayOff.add(m.id)
+    }
     setBusy(true)
     try {
       const generated = generateMonth(
@@ -144,7 +149,8 @@ export function HrSchedule() {
         members.map((m) => m.id),
         group.shifts,
         (id, iso) => !!leaveOn(id, iso),
-        group.fixedShifts ?? {},
+        fixed,
+        sundayOff,
       )
       await replaceScheduleMonth(group.id, month, generated)
       await mutateCells(generated, { revalidate: false })

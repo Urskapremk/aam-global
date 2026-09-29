@@ -603,6 +603,7 @@ export const SL: Record<string, string> = {
   'Manager signature': 'Podpis vodje',
   Planned: 'Planirano',
   'Overwrite the whole month with a new rotation?': 'Prepišem cel mesec z novo rotacijo?',
+  'Is this worker off on Sundays?': 'Ali je ob nedeljah prosta? (OK = da, vsako nedeljo prosto · Prekliči = ne, običajna 6+1 rotacija)',
   'Click a cell to change the shift.': 'Klik na celico zamenja smeno.',
   'No workers in this schedule yet — add them under Edit schedule.':
     'V razporedu še ni delavcev — dodajte jih pod Uredi razpored.',
