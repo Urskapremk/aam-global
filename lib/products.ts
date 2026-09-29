@@ -19,6 +19,8 @@ export type Product = {
   description: string
   /** Optional: mark a few products as featured on the shop landing */
   featured?: boolean
+  /** True when stock is tracked and has run out */
+  soldOut?: boolean
 }
 
 export const PRODUCT_CATEGORIES: ProductCategory[] = [
@@ -41,6 +43,7 @@ type DbProductRow = {
   alt: string
   description: string
   featured: boolean
+  soldOut?: boolean
 }
 
 /**
@@ -69,6 +72,7 @@ export function toProduct(row: DbProductRow, arPerEur?: number): Product {
     alt: row.alt || row.name,
     description: row.description,
     featured: row.featured,
+    soldOut: row.soldOut ?? false,
   }
 }
 

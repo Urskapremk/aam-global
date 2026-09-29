@@ -36,14 +36,20 @@ export function ProductCard({ product }: { product: Product }) {
             </span>
             <ShopPriceAlt eur={product.price} ar={product.priceAr} />
           </div>
-          <button
-            type="button"
-            onClick={() => addItem(product.id)}
-            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            <Plus className="h-4 w-4" />
-            Add
-          </button>
+          {product.soldOut ? (
+            <span className="rounded-full border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground">
+              Sold out
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => addItem(product.id)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4" />
+              Add
+            </button>
+          )}
         </div>
       </div>
     </article>
