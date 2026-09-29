@@ -88,7 +88,8 @@ export const shopProducts = pgTable('shop_products', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
   category: text('category').notNull().default('Accessories'),
-  price: integer('price').notNull().default(0), // EUR, whole euros
+  price: integer('price').notNull().default(0), // EUR, derived from priceAr when set
+  priceAr: integer('priceAr').notNull().default(0), // base price in Ariary
   image: text('image'), // Blob URL
   alt: text('alt').notNull().default(''),
   description: text('description').notNull().default(''),

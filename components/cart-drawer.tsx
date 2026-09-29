@@ -185,7 +185,11 @@ export function CartDrawer() {
                         <span className="text-sm font-semibold tabular-nums text-foreground">
                           {formatEur(product.price * quantity)}
                         </span>
-                        <ShopPriceAlt eur={product.price * quantity} className="text-[11px]" />
+                        <ShopPriceAlt
+                    eur={product.price * quantity}
+                    ar={product.priceAr ? product.priceAr * quantity : undefined}
+                    className="text-[11px]"
+                  />
                       </div>
                     </div>
                   </div>

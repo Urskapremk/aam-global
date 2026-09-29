@@ -11,6 +11,7 @@ export default async function AdminProductsPage() {
     name: r.name,
     category: r.category,
     price: r.price,
+    priceAr: r.priceAr ?? 0,
     image: r.image,
     alt: r.alt,
     description: r.description,

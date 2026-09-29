@@ -34,7 +34,7 @@ export function ProductCard({ product }: { product: Product }) {
             <span className="font-serif text-xl font-medium tabular-nums text-foreground">
               {formatEur(product.price)}
             </span>
-            <ShopPriceAlt eur={product.price} />
+            <ShopPriceAlt eur={product.price} ar={product.priceAr} />
           </div>
           <button
             type="button"

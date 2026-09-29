@@ -10,8 +10,10 @@ export type Product = {
   id: string
   name: string
   category: ProductCategory
-  /** Price in EUR */
+  /** Price in EUR (derived from priceAr at the current rate when set) */
   price: number
+  /** Base price in Ariary */
+  priceAr?: number
   image: string
   alt: string
   description: string
@@ -34,21 +36,35 @@ type DbProductRow = {
   name: string
   category: string
   price: number
+  priceAr?: number | null
   image: string | null
   alt: string
   description: string
   featured: boolean
 }
 
-/** Map a DB row into the shape the storefront + cart use (string id `db-<id>`). */
-export function toProduct(row: DbProductRow): Product {
+/**
+ * Map a DB row into the shape the storefront + cart use (string id `db-<id>`).
+ * Ariary is the base price; EUR is recalculated at the current rate.
+ */
+export function toProduct(row: DbProductRow, arPerEur?: number): Product {
+  const hasAr = (row.priceAr ?? 0) > 0
+  const rate = arPerEur && arPerEur > 0 ? arPerEur : 0
+  const price =
+    hasAr && rate ? Math.round((row.priceAr! / rate) * 100) / 100 : row.price
+  const priceAr = hasAr
+    ? row.priceAr!
+    : rate
+      ? Math.round(row.price * rate)
+      : undefined
   return {
     id: `db-${row.id}`,
     name: row.name,
     category: (PRODUCT_CATEGORIES.includes(row.category as ProductCategory)
       ? row.category
       : 'Accessories') as ProductCategory,
-    price: row.price,
+    price,
+    priceAr,
     image: row.image || '/placeholder.svg?height=800&width=800',
     alt: row.alt || row.name,
     description: row.description,

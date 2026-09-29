@@ -1,8 +1,9 @@
 'use server'
 
-import { db } from '@/lib/db'
+import { db, pool } from '@/lib/db'
 import { shopProducts } from '@/lib/db/schema'
 import { isAdmin } from '@/lib/admin-auth'
+import { getFxRates } from './fuel'
 import { asc, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 
@@ -10,7 +11,16 @@ async function assertAdmin() {
   if (!(await isAdmin())) throw new Error('Unauthorized')
 }
 
+let columnReady: Promise<unknown> | null = null
+function ensurePriceArColumn() {
+  columnReady ??= pool.query(
+    'ALTER TABLE shop_products ADD COLUMN IF NOT EXISTS "priceAr" integer NOT NULL DEFAULT 0',
+  )
+  return columnReady
+}
+
 export async function getProducts() {
+  await ensurePriceArColumn()
   return db
     .select()
     .from(shopProducts)
@@ -18,6 +28,7 @@ export async function getProducts() {
 }
 
 export async function getPublishedProducts() {
+  await ensurePriceArColumn()
   return db
     .select()
     .from(shopProducts)
@@ -28,7 +39,7 @@ export async function getPublishedProducts() {
 type ProductInput = {
   name: string
   category: string
-  price: number
+  priceAr: number
   image: string | null
   alt: string
   description: string
@@ -37,18 +48,28 @@ type ProductInput = {
   sortOrder: number
 }
 
+async function withEurPrice(data: ProductInput) {
+  await ensurePriceArColumn()
+  const priceAr = Math.max(0, Math.round(Number(data.priceAr) || 0))
+  const { arPerEur } = await getFxRates()
+  const price = arPerEur > 0 ? Math.round(priceAr / arPerEur) : 0
+  return { ...data, priceAr, price }
+}
+
 export async function createProduct(data: ProductInput) {
   await assertAdmin()
-  await db.insert(shopProducts).values({ ...data, updatedAt: new Date() })
+  const values = await withEurPrice(data)
+  await db.insert(shopProducts).values({ ...values, updatedAt: new Date() })
   revalidatePath('/admin/products')
   revalidatePath('/shop')
 }
 
 export async function updateProduct(id: number, data: ProductInput) {
   await assertAdmin()
+  const values = await withEurPrice(data)
   await db
     .update(shopProducts)
-    .set({ ...data, updatedAt: new Date() })
+    .set({ ...values, updatedAt: new Date() })
     .where(eq(shopProducts.id, id))
   revalidatePath('/admin/products')
   revalidatePath('/shop')

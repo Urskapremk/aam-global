@@ -15,22 +15,27 @@ export function useShopFx() {
 export function shopFxText(
   eur: number,
   fx: ConversionRates | null | undefined,
+  exactAr?: number,
 ): string | null {
-  if (!fx || !fx.arPerEur || !fx.arPerZar || !(eur > 0)) return null
-  const ar = Math.round(eur * fx.arPerEur)
-  const zar = Math.round((eur * fx.arPerEur) / fx.arPerZar)
+  if (!fx || !fx.arPerEur || !fx.arPerZar) return null
+  const ar = exactAr && exactAr > 0 ? exactAr : Math.round(eur * fx.arPerEur)
+  if (!(ar > 0)) return null
+  const zar = Math.round(ar / fx.arPerZar)
   return `Ar ${ar.toLocaleString('en-GB')} · R ${zar.toLocaleString('en-GB')}`
 }
 
 export function ShopPriceAlt({
   eur,
+  ar,
   className = '',
 }: {
   eur: number
+  /** Exact Ariary amount when known (base currency) */
+  ar?: number
   className?: string
 }) {
   const fx = useShopFx()
-  const text = shopFxText(eur, fx)
+  const text = shopFxText(eur, fx, ar)
   if (!text) return null
   return (
     <span

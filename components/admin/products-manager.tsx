@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, Loader2, EyeOff, Star } from 'lucide-react'
 import { ImageUpload } from '@/components/admin/image-upload'
 import { PRODUCT_CATEGORIES } from '@/lib/products'
+import { useShopFx } from '@/components/shop-price'
 import {
   createProduct,
   updateProduct,
@@ -16,6 +17,7 @@ export type AdminProduct = {
   name: string
   category: string
   price: number
+  priceAr: number
   image: string | null
   alt: string
   description: string
@@ -30,6 +32,7 @@ const EMPTY: Draft = {
   name: '',
   category: 'Lures & Baits',
   price: 0,
+  priceAr: 0,
   image: null,
   alt: '',
   description: '',
@@ -46,7 +49,15 @@ export function ProductsManager({
   emptyAction?: React.ReactNode
 }) {
   const router = useRouter()
+  const fx = useShopFx()
   const [draft, setDraft] = useState<Draft | null>(null)
+
+  const arOf = (p: { price: number; priceAr: number }) =>
+    p.priceAr > 0 ? p.priceAr : fx?.arPerEur ? Math.round(p.price * fx.arPerEur) : 0
+  const eurOf = (ar: number) =>
+    fx?.arPerEur ? Math.round((ar / fx.arPerEur) * 100) / 100 : 0
+  const zarOf = (ar: number) => (fx?.arPerZar ? Math.round(ar / fx.arPerZar) : 0)
+  const fmt = (n: number) => n.toLocaleString('en-GB')
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
 
@@ -57,7 +68,7 @@ export function ProductsManager({
       const payload = {
         name: draft.name.trim(),
         category: draft.category,
-        price: Number(draft.price) || 0,
+        priceAr: Math.round(Number(draft.priceAr) || 0),
         image: draft.image,
         alt: draft.alt || draft.name.trim(),
         description: draft.description,
@@ -137,12 +148,13 @@ export function ProductsManager({
                 )}
               </div>
               <p className="truncate text-sm text-muted-foreground">
-                {p.category} · €{p.price}
+                {p.category} · Ar {fmt(arOf(p))} · €{fmt(eurOf(arOf(p)) || p.price)} · R{' '}
+                {fmt(zarOf(arOf(p)))}
               </p>
             </div>
             <button
               type="button"
-              onClick={() => setDraft({ ...p })}
+              onClick={() => setDraft({ ...p, priceAr: arOf(p) })}
               aria-label="Edit"
               className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
             >
@@ -198,16 +210,23 @@ export function ProductsManager({
                     ))}
                   </select>
                 </Field>
-                <Field label="Price (€)">
+                <Field label="Price (Ar)">
                   <input
                     type="number"
                     min={0}
-                    value={draft.price}
+                    step={1000}
+                    value={draft.priceAr || ''}
                     onChange={(e) =>
-                      setDraft({ ...draft, price: Number(e.target.value) })
+                      setDraft({ ...draft, priceAr: Number(e.target.value) })
                     }
                     className="input"
+                    placeholder="e.g. 150000"
                   />
+                  <p className="mt-1.5 text-xs tabular-nums text-muted-foreground">
+                    {fx
+                      ? `≈ € ${fmt(eurOf(draft.priceAr))} · R ${fmt(zarOf(draft.priceAr))}`
+                      : 'Loading rate…'}
+                  </p>
                 </Field>
               </div>
 

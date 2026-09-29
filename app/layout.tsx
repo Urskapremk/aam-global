@@ -5,6 +5,7 @@ import './globals.css'
 import { CartProvider } from '@/components/cart-context'
 import { CartDrawer } from '@/components/cart-drawer'
 import { getPublishedProducts } from '@/app/actions/shop-products'
+import { getShopFxRates } from '@/app/actions/shop-fx'
 import { toProduct, PRODUCTS } from '@/lib/products'
 
 const geistSans = Geist({
@@ -43,7 +44,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const dbCatalog = (await getPublishedProducts()).map(toProduct)
+  const [rows, fx] = await Promise.all([
+    getPublishedProducts(),
+    getShopFxRates().catch(() => null),
+  ])
+  const dbCatalog = rows.map((r) => toProduct(r, fx?.arPerEur))
   const catalog = dbCatalog.length > 0 ? dbCatalog : PRODUCTS
   return (
     <html lang="en" className={`${geistSans.variable} ${cormorant.variable} bg-background`}>
