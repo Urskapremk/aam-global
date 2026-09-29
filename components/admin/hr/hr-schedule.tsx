@@ -118,11 +118,9 @@ export function HrSchedule() {
   })
   const today = todayIso()
 
-  async function cycleCell(staffId: string, iso: string) {
+  async function setCell(staffId: string, iso: string, next: string) {
     if (!group) return
-    const order = [OFF, ...group.shifts.map((s) => s.code)]
-    const current = cellMap.get(`${staffId}|${iso}`) ?? OFF
-    const next = order[(order.indexOf(current) + 1) % order.length]
+    if ((cellMap.get(`${staffId}|${iso}`) ?? OFF) === next) return
     const optimistic: ScheduleCell[] = [
       ...(cells ?? []).filter((c) => !(c.staffId === staffId && c.date === iso)),
       { staffId, date: iso, shift: next },
@@ -425,16 +423,23 @@ export function HrSchedule() {
                                         {t(LEAVE_LABELS[lv.kind as LeaveKind] ?? 'Leave')}
                                       </span>
                                     ) : (
-                                      <button
-                                        type="button"
-                                        onClick={() => cycleCell(m.id, iso)}
-                                        aria-label={`${m.name}, ${iso}: ${s ? s.label : t('Off')}`}
-                                        className={`flex min-h-7 w-full cursor-pointer items-center rounded-md border px-2 text-left text-[11px] font-medium transition hover:border-accent ${
+                                      <select
+                                        value={s ? code : OFF}
+                                        onChange={(e) => setCell(m.id, iso, e.target.value)}
+                                        aria-label={`${m.name}, ${iso}`}
+                                        className={`min-h-7 w-full cursor-pointer appearance-none rounded-md border px-2 text-[11px] font-medium transition hover:border-accent focus:outline-none focus:ring-1 focus:ring-accent ${
                                           s ? SHIFT_CLASSES[s.color] : OFF_CLASS
                                         }`}
                                       >
-                                        {s ? s.label : t('Off')}
-                                      </button>
+                                        {group.shifts.map((sh) => (
+                                          <option key={sh.code} value={sh.code} className="bg-background text-foreground">
+                                            {sh.label}
+                                          </option>
+                                        ))}
+                                        <option value={OFF} className="bg-background text-foreground">
+                                          {t('Off')}
+                                        </option>
+                                      </select>
                                     )}
                                   </td>
                                 )
