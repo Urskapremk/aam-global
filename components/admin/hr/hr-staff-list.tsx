@@ -24,6 +24,8 @@ function roleTone(role: HrStaff['role']) {
 }
 
 const PERSONAL_FIELDS: { key: keyof HrStaff; label: string; type?: string; wide?: boolean }[] = [
+  { key: 'name', label: 'Full name' },
+  { key: 'nickname', label: 'Nickname' },
   { key: 'position', label: 'Position' },
   { key: 'phone', label: 'Phone' },
   { key: 'birthDate', label: 'Date of birth', type: 'date' },
@@ -46,10 +48,13 @@ function StaffCard({ staff, onSaved }: { staff: HrStaff; onSaved: () => void }) 
 
   async function save(key: keyof HrStaff, value: string | number | boolean) {
     if (staff[key] === value) return
+    if (key === 'name' && !value) return
     setSaving(key)
     try {
       await updateHrStaff(staff.id, { [key]: value } as Partial<HrStaff>)
       onSaved()
+    } catch (e) {
+      alert(t(e instanceof Error ? e.message : 'Save failed'))
     } finally {
       setSaving(null)
     }
@@ -68,6 +73,9 @@ function StaffCard({ staff, onSaved }: { staff: HrStaff; onSaved: () => void }) 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="truncate text-sm font-medium text-foreground">{staff.name}</span>
+            {staff.nickname && (
+              <span className="text-sm text-accent">„{staff.nickname}“</span>
+            )}
             <span
               className="rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.1em]"
               style={{ color: tone.fg, backgroundColor: tone.bg }}
@@ -173,14 +181,14 @@ function StaffCard({ staff, onSaved }: { staff: HrStaff; onSaved: () => void }) 
                 <button
                   type="button"
                   onClick={async () => {
-                    if (!confirm(t('Remove this person from active staff?'))) return
+                    if (!confirm(t('Remove from the list? The card stays in the inactive archive.'))) return
                     await deleteHrStaff(staff.id)
                     onSaved()
                   }}
                   className="flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full border border-destructive/40 px-4 text-xs font-medium text-destructive hover:bg-destructive/10"
                 >
                   <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                  {staff.source === 'crew' ? t('Deactivate') : t('Delete')}
+                  {t('Remove from list')}
                 </button>
               )}
             </div>
@@ -199,12 +207,16 @@ export function HrStaffList() {
   const [name, setName] = useState('')
   const [position, setPosition] = useState('')
   const [busy, setBusy] = useState(false)
+  const [showInactive, setShowInactive] = useState(false)
 
   const q = query.trim().toLowerCase()
   const list = (data ?? []).filter(
-    (s) => !q || s.name.toLowerCase().includes(q) || s.position.toLowerCase().includes(q),
+    (s) =>
+      s.active !== showInactive &&
+      (!q || s.name.toLowerCase().includes(q) || s.nickname.toLowerCase().includes(q) || s.position.toLowerCase().includes(q)),
   )
   const active = (data ?? []).filter((s) => s.active)
+  const inactiveCount = (data ?? []).length - active.length
   const payroll = active.reduce((s, x) => s + x.baseSalaryAr, 0)
 
   return (
@@ -263,8 +275,28 @@ export function HrStaffList() {
             </button>
           </form>
         )}
-        <div className="border-b border-border p-4">
-          <div className="relative max-w-xs">
+        <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">
+          <div className="flex gap-1 rounded-full border border-border p-1" role="group" aria-label={t('Status')}>
+            {[
+              { v: false, label: `${t('Active')} · ${active.length}` },
+              { v: true, label: `${t('Inactive')} · ${inactiveCount}` },
+            ].map((o) => (
+              <button
+                key={String(o.v)}
+                type="button"
+                aria-pressed={showInactive === o.v}
+                onClick={() => setShowInactive(o.v)}
+                className={`min-h-8 cursor-pointer rounded-full px-4 text-xs font-medium transition ${
+                  showInactive === o.v
+                    ? 'bg-accent/15 text-accent'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <div className="relative w-full max-w-xs">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
             <input
               type="search"

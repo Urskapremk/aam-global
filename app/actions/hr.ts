@@ -13,6 +13,8 @@ import { getCrewMonth, getKnownWorkers } from '@/app/actions/crew'
 export type HrStaff = {
   id: string
   name: string
+  /** Original name from the trips, kept after a rename so crew sync still matches. */
+  crewName: string
   role: 'captain' | 'crew' | 'staff'
   source: 'crew' | 'manual'
   position: string
@@ -32,6 +34,7 @@ export type HrStaff = {
   contractEnd: string
   active: boolean
   notes: string
+  nickname: string
 }
 
 export type HrLeave = {
@@ -92,6 +95,8 @@ function ensureTables(): Promise<void> {
           notes text NOT NULL DEFAULT '',
           "createdAt" timestamptz NOT NULL DEFAULT now()
         );
+        ALTER TABLE hr_staff ADD COLUMN IF NOT EXISTS "crewName" text;
+        ALTER TABLE hr_staff ADD COLUMN IF NOT EXISTS nickname text NOT NULL DEFAULT '';
         CREATE TABLE IF NOT EXISTS hr_leave (
           id text PRIMARY KEY,
           "staffId" text NOT NULL REFERENCES hr_staff(id) ON DELETE CASCADE,
@@ -154,6 +159,7 @@ function rowToStaff(r: Record<string, unknown>): HrStaff {
   return {
     id: String(r.id),
     name: String(r.name),
+    crewName: String(r.crewName ?? ''),
     role: (r.role as HrStaff['role']) ?? 'staff',
     source: (r.source as HrStaff['source']) ?? 'manual',
     position: String(r.position ?? ''),
@@ -173,6 +179,7 @@ function rowToStaff(r: Record<string, unknown>): HrStaff {
     contractEnd: String(r.contractEnd ?? ''),
     active: r.active !== false,
     notes: String(r.notes ?? ''),
+    nickname: String(r.nickname ?? ''),
   }
 }
 
@@ -187,7 +194,8 @@ export async function getHrStaff(): Promise<HrStaff[]> {
   for (const w of known) {
     await pool.query(
       `INSERT INTO hr_staff (id, name, role, source, position)
-       VALUES ($1, $2, $3, 'crew', $4)
+       SELECT $1, $2, $3, 'crew', $4
+       WHERE NOT EXISTS (SELECT 1 FROM hr_staff WHERE "crewName" = $2)
        ON CONFLICT (name) DO NOTHING`,
       [newId('hr'), w.name, w.role, w.role === 'captain' ? 'Captain' : 'Deckhand'],
     )
@@ -200,6 +208,7 @@ export async function getHrStaff(): Promise<HrStaff[]> {
 
 const STAFF_FIELDS = [
   'name',
+  'nickname',
   'position',
   'employmentType',
   'birthDate',
@@ -253,22 +262,29 @@ export async function updateHrStaff(
     }
   }
   if (sets.length === 0) return { ok: true }
+  if ('name' in patch) {
+    const clash = await pool.query(`SELECT 1 FROM hr_staff WHERE name = $1 AND id <> $2`, [
+      values[STAFF_FIELDS.filter((k) => k in patch).indexOf('name')],
+      id,
+    ])
+    if (clash.rowCount) throw new Error('A person with this name already exists')
+    // Remember the trip name before the first rename, so the crew sync does
+    // not recreate the old name as a new card.
+    await pool.query(
+      `UPDATE hr_staff SET "crewName" = COALESCE("crewName", name) WHERE id = $1 AND source = 'crew'`,
+      [id],
+    )
+  }
   values.push(id)
   await pool.query(`UPDATE hr_staff SET ${sets.join(', ')} WHERE id = $${values.length}`, values)
   revalidatePath('/admin/hr')
   return { ok: true }
 }
 
+/** Moves the person to the inactive archive; the card and its history stay. */
 export async function deleteHrStaff(id: string): Promise<{ ok: true }> {
   await guard()
-  // Crew-linked cards would reappear from the trips, so they are only
-  // deactivated; manually added cards are removed.
-  const { rows } = await pool.query(`SELECT source FROM hr_staff WHERE id = $1`, [id])
-  if (rows[0]?.source === 'crew') {
-    await pool.query(`UPDATE hr_staff SET active = false WHERE id = $1`, [id])
-  } else {
-    await pool.query(`DELETE FROM hr_staff WHERE id = $1`, [id])
-  }
+  await pool.query(`UPDATE hr_staff SET active = false WHERE id = $1`, [id])
   revalidatePath('/admin/hr')
   return { ok: true }
 }

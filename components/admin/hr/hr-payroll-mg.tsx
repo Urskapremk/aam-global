@@ -307,7 +307,7 @@ export function HrPayrollMg() {
                 staff={s}
                 month={month}
                 entry={entryFor(s.id)}
-                paidAr={payroll.data?.paidByName[s.name] ?? 0}
+                paidAr={payroll.data?.paidByName[s.crewName || s.name] ?? 0}
                 onSaved={() => payroll.mutate()}
               />
             ))}
