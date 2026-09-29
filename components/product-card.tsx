@@ -3,6 +3,7 @@
 import { Plus } from 'lucide-react'
 import { useCart } from '@/components/cart-context'
 import { formatEur, type Product } from '@/lib/products'
+import { ShopPriceAlt } from '@/components/shop-price'
 
 export function ProductCard({ product }: { product: Product }) {
   const { addItem } = useCart()
@@ -29,9 +30,12 @@ export function ProductCard({ product }: { product: Product }) {
         </p>
 
         <div className="mt-4 flex items-center justify-between pt-1">
-          <span className="font-serif text-xl font-medium tabular-nums text-foreground">
-            {formatEur(product.price)}
-          </span>
+          <div className="flex flex-col">
+            <span className="font-serif text-xl font-medium tabular-nums text-foreground">
+              {formatEur(product.price)}
+            </span>
+            <ShopPriceAlt eur={product.price} />
+          </div>
           <button
             type="button"
             onClick={() => addItem(product.id)}

@@ -5,6 +5,7 @@ import { X, Minus, Plus, Trash2, ShoppingBag, MessageCircle } from 'lucide-react
 import { useCart } from '@/components/cart-context'
 import { formatEur } from '@/lib/products'
 import { saveInboundMessage } from '@/app/actions/messages'
+import { ShopPriceAlt, shopFxText, useShopFx } from '@/components/shop-price'
 
 // AAM WhatsApp order line (digits only, international format)
 const WHATSAPP_NUMBER = '27827777324'
@@ -12,6 +13,7 @@ const WHATSAPP_NUMBER = '27827777324'
 export function CartDrawer() {
   const { items, subtotal, count, isOpen, closeCart, setQuantity, removeItem } =
     useCart()
+  const fx = useShopFx()
 
   // Lock body scroll while the drawer is open
   useEffect(() => {
@@ -44,6 +46,7 @@ export function CartDrawer() {
       ...lines,
       '',
       `Total: ${formatEur(subtotal)}`,
+      ...(shopFxText(subtotal, fx) ? [`(≈ ${shopFxText(subtotal, fx)})`] : []),
     ].join('\n')
 
     // Keep a copy of the order in the admin inbox (best-effort, non-blocking).
@@ -178,9 +181,12 @@ export function CartDrawer() {
                           <Plus className="h-3.5 w-3.5" />
                         </button>
                       </div>
-                      <span className="text-sm font-semibold tabular-nums text-foreground">
-                        {formatEur(product.price * quantity)}
-                      </span>
+                      <div className="text-right">
+                        <span className="text-sm font-semibold tabular-nums text-foreground">
+                          {formatEur(product.price * quantity)}
+                        </span>
+                        <ShopPriceAlt eur={product.price * quantity} className="text-[11px]" />
+                      </div>
                     </div>
                   </div>
                 </li>
@@ -190,9 +196,12 @@ export function CartDrawer() {
             <footer className="border-t border-border px-6 py-5">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Subtotal</span>
-                <span className="font-serif text-2xl font-medium text-foreground tabular-nums">
-                  {formatEur(subtotal)}
-                </span>
+                <div className="text-right">
+                  <span className="font-serif text-2xl font-medium text-foreground tabular-nums">
+                    {formatEur(subtotal)}
+                  </span>
+                  <ShopPriceAlt eur={subtotal} />
+                </div>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 Shipping and duties calculated when we confirm your order.
