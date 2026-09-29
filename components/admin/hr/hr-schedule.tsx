@@ -46,6 +46,12 @@ function shiftMonth(month: string, delta: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
+const EXCLUDED_POSITION = /captain|capitaine|kapitan|manager|menedž|menedz|upravitelj|direkt|gérant|gerant/i
+
+function isSchedulable(s: HrStaff): boolean {
+  return s.role !== 'captain' && !EXCLUDED_POSITION.test(s.position ?? '')
+}
+
 function fmtHours(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1).replace('.', ',')
 }
@@ -72,7 +78,7 @@ export function HrSchedule() {
 
   const staffById = useMemo(() => new Map((staff ?? []).map((s) => [s.id, s])), [staff])
   const members = useMemo(
-    () => (group?.memberIds ?? []).map((id) => staffById.get(id)).filter((s): s is HrStaff => !!s),
+    () => (group?.memberIds ?? []).map((id) => staffById.get(id)).filter((s): s is HrStaff => !!s && isSchedulable(s)),
     [group, staffById],
   )
 
@@ -511,11 +517,13 @@ function GroupEditor({
   const [shifts, setShifts] = useState<ScheduleShift[]>(
     initial?.shifts ?? DEFAULT_SHIFTS.map((s) => ({ ...s, label: t(s.label) })),
   )
-  const [memberIds, setMemberIds] = useState<string[]>(initial?.memberIds ?? [])
+  const [memberIds, setMemberIds] = useState<string[]>(
+    initial?.memberIds ?? staff.filter((s) => s.active && isSchedulable(s)).map((s) => s.id),
+  )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const activeStaff = staff.filter((s) => s.active || memberIds.includes(s.id))
+  const activeStaff = staff.filter((s) => isSchedulable(s) && (s.active || memberIds.includes(s.id)))
 
   function updateShift(i: number, patch: Partial<ScheduleShift>) {
     setShifts((list) => list.map((s, idx) => (idx === i ? { ...s, ...patch } : s)))
