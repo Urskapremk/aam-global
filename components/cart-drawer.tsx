@@ -190,6 +190,11 @@ export function CartDrawer() {
                     ar={product.priceAr ? product.priceAr * quantity : undefined}
                     className="text-[11px]"
                   />
+                        {quantity > 1 && (
+                          <span className="block text-[11px] tabular-nums text-muted-foreground">
+                            {quantity} × {formatEur(product.price)} / piece
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

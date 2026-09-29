@@ -32,7 +32,10 @@ export function ProductCard({ product }: { product: Product }) {
         <div className="mt-4 flex items-center justify-between pt-1">
           <div className="flex flex-col">
             <span className="font-serif text-xl font-medium tabular-nums text-foreground">
-              {formatEur(product.price)}
+              {formatEur(product.price)}{' '}
+              <span className="font-sans text-xs font-normal text-muted-foreground">
+                / piece
+              </span>
             </span>
             <ShopPriceAlt eur={product.price} ar={product.priceAr} />
           </div>

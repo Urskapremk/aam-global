@@ -186,6 +186,9 @@ export function ProductsManager({
                 </div>
 
                 <dl className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg bg-secondary/60 p-3 text-sm tabular-nums">
+                  <dt className="col-span-2 mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+                    {t('All prices per piece')}
+                  </dt>
                   <dt className="text-muted-foreground">{t('Purchase price')}</dt>
                   <dd className="text-right">Ar {fmt(Number(p.costAr) || 0)}</dd>
                   <dt className="text-muted-foreground">{t('Transport')}</dt>
@@ -219,7 +222,10 @@ export function ProductsManager({
                   <div>
                     <p className="text-xs text-muted-foreground">{t('Selling price')}</p>
                     <p className="text-lg font-semibold tabular-nums text-foreground">
-                      Ar {fmt(sellAr)}
+                      Ar {fmt(sellAr)}{' '}
+                      <span className="text-xs font-normal text-muted-foreground">
+                        / {t('per piece')}
+                      </span>
                     </p>
                     <p className="text-xs tabular-nums text-muted-foreground">
                       € {fmt(eurOf(sellAr) || p.price)} · R {fmt(zarOf(sellAr))}
@@ -288,7 +294,7 @@ export function ProductsManager({
                     ))}
                   </select>
                 </Field>
-                <Field label={t('Selling price (Ar)')}>
+                <Field label={t('Selling price (Ar, per piece)')}>
                   <input
                     type="number"
                     min={0}
@@ -432,7 +438,7 @@ function CostingBlock({
     <div className="rounded-xl border border-border bg-secondary/40 p-4">
       <div className="mb-3 flex items-baseline justify-between gap-2">
         <p className="text-sm font-medium text-foreground">{t('Cost calculation')}</p>
-        <p className="text-xs text-muted-foreground">{t('Admin only · in Ar')}</p>
+        <p className="text-xs text-muted-foreground">{t('Admin only · in Ar · per piece')}</p>
       </div>
       <div className="grid grid-cols-3 gap-3">
         {costField('costAr', t('Purchase price'))}
