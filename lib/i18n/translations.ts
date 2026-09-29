@@ -580,6 +580,7 @@ export const SL: Record<string, string> = {
     'Rotating workers change shifts weekly. A fixed worker always gets the same shift (e.g. housekeeper — mornings only).':
       'Delavci z menjavo izmen se menjajo tedensko. Delavec s stalno izmeno ima vedno isto izmeno (npr. sobarica — samo dopoldan).',
     Rotates: 'Menjava izmen',
+    'Only for fixed workers': 'Samo za stalne delavce (ne v menjavi)',
     Only: 'Samo',
   'Add workers in the staff list first.': 'Najprej dodajte delavce v seznam osebja.',
   'Enter a schedule name.': 'Vpišite ime razporeda.',

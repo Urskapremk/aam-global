@@ -65,6 +65,7 @@ function cleanShifts(shifts: ScheduleShift[]): ScheduleShift[] {
       label: String(s.label ?? '').trim().slice(0, 60) || `Shift ${i + 1}`,
       hours: Math.min(24, Math.max(0, Number(s.hours) || 0)),
       color: SHIFT_COLORS.includes(s.color) ? s.color : SHIFT_COLORS[i % SHIFT_COLORS.length],
+      fixedOnly: !!s.fixedOnly,
     }))
     .filter((s) => s.code !== OFF)
 }

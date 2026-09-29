@@ -714,6 +714,15 @@ function GroupEditor({
                       />
                     ))}
                   </div>
+                  <label className="flex min-h-9 cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={!!s.fixedOnly}
+                      onChange={(e) => updateShift(i, { fixedOnly: e.target.checked })}
+                      className="h-4 w-4 accent-[#c59b5b]"
+                    />
+                    {t('Only for fixed workers')}
+                  </label>
                   <button
                     type="button"
                     aria-label={t('Delete')}

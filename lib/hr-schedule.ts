@@ -8,6 +8,8 @@ export type ScheduleShift = {
   label: string
   hours: number
   color: ShiftColor
+  /** Only for fixed workers (e.g. housekeeper 7-13:30) — never handed out by the rotation. */
+  fixedOnly?: boolean
 }
 
 export type ScheduleGroup = {
@@ -129,6 +131,8 @@ export function generateMonth(
   const cells: ScheduleCell[] = []
   if (shifts.length === 0) return cells
   const codes = new Set(shifts.map((s) => s.code))
+  const rotatingPool = shifts.filter((s) => !s.fixedOnly)
+  const pool = rotatingPool.length > 0 ? rotatingPool : shifts
   const [y, m] = month.split('-').map(Number)
   for (const iso of monthDates(month)) {
     const d = Number(iso.slice(8, 10))
@@ -139,7 +143,7 @@ export function generateMonth(
       if (isOnLeave(staffId, iso)) shift = OFF
       else if ((globalDay + idx) % 7 === 6) shift = OFF
       else if (codes.has(fixedShifts[staffId])) shift = fixedShifts[staffId]
-      else shift = shifts[(idx + week) % shifts.length].code
+      else shift = pool[(idx + week) % pool.length].code
       cells.push({ staffId, date: iso, shift })
     })
   }
