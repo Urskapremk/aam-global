@@ -164,9 +164,17 @@ export function ProductsManager({
                 <img
                   src={p.image || '/placeholder.svg?height=300&width=400&query=product'}
                   alt={p.alt || p.name}
-                  className="h-full w-full object-cover"
-                />
-                <div className="absolute left-2 top-2 flex gap-1.5">
+  className="h-full w-full object-cover"
+  />
+  {p.image2 && (
+  // eslint-disable-next-line @next/next/no-img-element
+  <img
+  src={p.image2}
+  alt={`${p.alt || p.name} (2)`}
+  className="absolute bottom-2 right-2 h-16 w-16 rounded-md border-2 border-background object-cover shadow-md"
+  />
+  )}
+  <div className="absolute left-2 top-2 flex gap-1.5">
                   {p.featured && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-background/90 px-2 py-0.5 text-xs text-foreground">
                       <Star className="h-3 w-3 fill-accent text-accent" /> {t('Featured')}
