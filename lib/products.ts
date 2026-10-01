@@ -2,6 +2,7 @@ export type ProductCategory =
   | 'Rods & Reels'
   | 'Lines & Leaders'
   | 'Lures & Baits'
+  | 'Hooks'
   | 'Terminal Tackle'
   | 'Apparel'
   | 'Accessories'
@@ -29,6 +30,7 @@ export const PRODUCT_CATEGORIES: ProductCategory[] = [
   'Rods & Reels',
   'Lines & Leaders',
   'Lures & Baits',
+  'Hooks',
   'Terminal Tackle',
   'Apparel',
   'Accessories',

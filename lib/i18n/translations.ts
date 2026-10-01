@@ -221,6 +221,7 @@ export const SL: Record<string, string> = {
   'Rods & Reels': 'Palice in role',
   'Lines & Leaders': 'Vrvice in predvrvice',
   'Lures & Baits': 'Vabe',
+  Hooks: 'Trnki',
   'Terminal Tackle': 'Pribor za montažo',
   Apparel: 'Oblačila',
   Accessories: 'Dodatki',
