@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useId } from 'react'
 import { Upload, X, Loader2, ClipboardPaste } from 'lucide-react'
 import { uploadImage } from '@/app/actions/upload'
 import { shrinkImageToDataUrl, dataUrlToFile } from '@/lib/image-client'
@@ -21,6 +21,19 @@ function imageFromClipboardData(data: DataTransfer | null): File | null {
   return null
 }
 
+// Several upload fields can listen for Ctrl+V on the same page; only the one the
+// user last interacted with (or the first mounted) may take the pasted image.
+const pasteFieldIds: string[] = []
+let activePasteFieldId: string | null = null
+
+function isPasteTarget(id: string) {
+  const target =
+    activePasteFieldId && pasteFieldIds.includes(activePasteFieldId)
+      ? activePasteFieldId
+      : pasteFieldIds[0]
+  return target === id
+}
+
 export function ImageUpload({
   value,
   onChange,
@@ -37,6 +50,7 @@ export function ImageUpload({
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const uploadingRef = useRef(false)
+  const fieldId = useId()
 
   async function handleFile(file: File) {
     if (uploadingRef.current) return
@@ -90,7 +104,7 @@ export function ImageUpload({
       }
       setError('V odložišču ni slike. Najprej naredite posnetek zaslona.')
     } catch {
-      setError('Dostop do odložišča zavrnjen — pritisnite Ctrl+V.')
+      setError('Pritisnite Ctrl+V — slika bo dodana v to polje.')
     }
   }
 
@@ -100,18 +114,32 @@ export function ImageUpload({
   handleFileRef.current = handleFile
   useEffect(() => {
     if (!listenPaste) return
+    pasteFieldIds.push(fieldId)
     function onPaste(e: ClipboardEvent) {
+      if (!isPasteTarget(fieldId)) return
       const file = imageFromClipboardData(e.clipboardData)
       if (!file) return
       e.preventDefault()
       handleFileRef.current(file)
     }
     document.addEventListener('paste', onPaste)
-    return () => document.removeEventListener('paste', onPaste)
-  }, [listenPaste])
+    return () => {
+      document.removeEventListener('paste', onPaste)
+      const i = pasteFieldIds.indexOf(fieldId)
+      if (i >= 0) pasteFieldIds.splice(i, 1)
+      if (activePasteFieldId === fieldId) activePasteFieldId = null
+    }
+  }, [listenPaste, fieldId])
 
   return (
-    <div>
+    <div
+      onPointerDownCapture={() => {
+        activePasteFieldId = fieldId
+      }}
+      onFocusCapture={() => {
+        activePasteFieldId = fieldId
+      }}
+    >
       <label className="mb-1.5 block text-sm font-medium text-foreground">
         {label}
       </label>

@@ -348,6 +348,7 @@ export function ProductsManager({
                 <ImageUpload
                   value={draft.image2 ?? null}
                   onChange={(url) => setDraft({ ...draft, image2: url })}
+                  listenPaste
                   label={t('Second photo')}
                 />
               </div>
