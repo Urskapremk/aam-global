@@ -83,29 +83,55 @@ export function ImageUpload({
     }
   }
 
+  const [pasteBoxOpen, setPasteBoxOpen] = useState(false)
+  const pasteBoxRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    if (pasteBoxOpen) pasteBoxRef.current?.focus()
+  }, [pasteBoxOpen])
+
   async function pasteFromClipboard() {
     setError(null)
-    if (!navigator.clipboard?.read) {
-      setError('Brskalnik ne podpira branja odložišča — pritisnite Ctrl+V.')
+    // Embedded previews often block navigator.clipboard.read; a focused
+    // editable box always receives a real paste event on Ctrl+V.
+    if (navigator.clipboard?.read) {
+      try {
+        const items = await navigator.clipboard.read()
+        for (const item of items) {
+          const type = item.types.find((t) => t.startsWith('image/'))
+          if (type) {
+            const blob = await item.getType(type)
+            const ext = type.split('/')[1] || 'png'
+            await handleFile(
+              new File([blob], `screenshot-${Date.now()}.${ext}`, { type }),
+            )
+            return
+          }
+        }
+      } catch {
+        // fall through to the paste box
+      }
+    }
+    setPasteBoxOpen(true)
+  }
+
+  function onBoxPaste(e: React.ClipboardEvent) {
+    const file = imageFromClipboardData(e.clipboardData)
+    e.preventDefault()
+    if (!file) {
+      setError('V odložišču ni slike. Najprej naredite posnetek zaslona.')
       return
     }
-    try {
-      const items = await navigator.clipboard.read()
-      for (const item of items) {
-        const type = item.types.find((t) => t.startsWith('image/'))
-        if (type) {
-          const blob = await item.getType(type)
-          const ext = type.split('/')[1] || 'png'
-          await handleFile(
-            new File([blob], `screenshot-${Date.now()}.${ext}`, { type }),
-          )
-          return
-        }
-      }
-      setError('V odložišču ni slike. Najprej naredite posnetek zaslona.')
-    } catch {
-      setError('Pritisnite Ctrl+V — slika bo dodana v to polje.')
-    }
+    setPasteBoxOpen(false)
+    handleFile(file)
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault()
+    const file = Array.from(e.dataTransfer.files).find((f) =>
+      f.type.startsWith('image/'),
+    )
+    if (file) handleFile(file)
   }
 
   // Only reacts when the clipboard holds an image, so text pastes into other
@@ -173,6 +199,8 @@ export function ImageUpload({
                 handleFile(file)
               }
             }}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={onDrop}
             disabled={uploading}
             className="flex h-36 w-52 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-secondary text-sm text-muted-foreground transition-colors hover:border-accent hover:text-foreground"
           >
@@ -213,6 +241,33 @@ export function ImageUpload({
           e.target.value = ''
         }}
       />
+
+      {pasteBoxOpen && !uploading && (
+        <div className="mt-2 flex items-start gap-2">
+          <textarea
+            ref={pasteBoxRef}
+            onPaste={onBoxPaste}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setPasteBoxOpen(false)
+              else if (!(e.ctrlKey || e.metaKey)) e.preventDefault()
+            }}
+            onBlur={() => setPasteBoxOpen(false)}
+            aria-label="Prilepite sliko s Ctrl+V"
+            placeholder="Kliknite sem in pritisnite Ctrl+V (Mac: Cmd+V)"
+            rows={2}
+            className="w-52 resize-none rounded-lg border-2 border-dashed border-accent bg-background px-3 py-2 text-sm text-foreground caret-transparent placeholder:text-muted-foreground focus:outline-none"
+          />
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setPasteBoxOpen(false)}
+            aria-label="Zapri"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {error && <p className="mt-1.5 text-sm text-red-500">{error}</p>}
     </div>
