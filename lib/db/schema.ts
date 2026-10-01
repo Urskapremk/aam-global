@@ -98,6 +98,7 @@ export const shopProducts = pgTable('shop_products', {
   // Pieces on hand; null = not tracked yet (never shown as sold out).
   stock: integer('stock'),
   image: text('image'), // Blob URL
+  image2: text('image2'), // optional second photo
   alt: text('alt').notNull().default(''),
   description: text('description').notNull().default(''),
   featured: boolean('featured').notNull().default(false),

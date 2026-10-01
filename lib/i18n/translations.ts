@@ -214,6 +214,7 @@ export const SL: Record<string, string> = {
   'Loading rate…': 'Nalagam tečaj…',
   'Short product description…': 'Kratek opis artikla…',
   Photo: 'Fotografija',
+  'Second photo': 'Druga fotografija',
   'Published (visible in the shop)': 'Objavljeno (vidno v trgovini)',
   'Cost calculation': 'Nabavna kalkulacija',
   'Admin only · in Ar': 'Samo v adminu · v Ar',

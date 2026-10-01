@@ -18,6 +18,7 @@ export default async function AdminProductsPage() {
     marginPct: r.marginPct ?? 0,
     stock: r.stock ?? null,
     image: r.image,
+    image2: r.image2 ?? null,
     alt: r.alt,
     description: r.description,
     featured: r.featured,

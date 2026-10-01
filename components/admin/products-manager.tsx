@@ -26,6 +26,7 @@ export type AdminProduct = {
   marginPct: number
   stock: number | null
   image: string | null
+  image2: string | null
   alt: string
   description: string
   featured: boolean
@@ -52,6 +53,7 @@ const EMPTY: Draft = {
   marginPct: 0,
   stock: null,
   image: null,
+  image2: null,
   alt: '',
   description: '',
   featured: false,
@@ -93,6 +95,7 @@ export function ProductsManager({
         customsAr: Math.round(Number(draft.customsAr) || 0),
         marginPct: Number(draft.marginPct) || 0,
         image: draft.image,
+        image2: draft.image2 ?? null,
         alt: draft.alt || draft.name.trim(),
         description: draft.description,
         featured: draft.featured,
@@ -335,12 +338,19 @@ export function ProductsManager({
                 />
               </Field>
 
-              <ImageUpload
-              value={draft.image}
-              onChange={(url) => setDraft({ ...draft, image: url })}
-              listenPaste
-                label={t('Photo')}
-              />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <ImageUpload
+                  value={draft.image}
+                  onChange={(url) => setDraft({ ...draft, image: url })}
+                  listenPaste
+                  label={t('Photo')}
+                />
+                <ImageUpload
+                  value={draft.image2 ?? null}
+                  onChange={(url) => setDraft({ ...draft, image2: url })}
+                  label={t('Second photo')}
+                />
+              </div>
 
               <div className="flex flex-col gap-2">
                 <label className="flex items-center gap-2 text-sm text-foreground">
