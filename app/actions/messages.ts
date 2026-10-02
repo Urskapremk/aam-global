@@ -69,8 +69,17 @@ export async function saveInboundMessage(args: InboundArgs) {
 
   // Email is required for contact/excursion (so we can reply), but optional for
   // orders placed over WhatsApp (we may not have it yet).
-  if (!body || (args.source !== 'order' && (!name || !email))) {
+  if (!body || (args.source !== 'order' && !name)) {
     return { ok: false, error: 'Please fill in your name, email, and message.' }
+  }
+  if (args.source !== 'order') {
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    if (!email || !emailOk) {
+      return {
+        ok: false,
+        error: 'Please enter a valid email so we can reply to you.',
+      }
+    }
   }
 
   // Route into a custom folder if a rule matches this sender.

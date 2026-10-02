@@ -90,8 +90,22 @@ export function ExcursionInquiry({ title }: { title: string }) {
                 </h3>
                 <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4">
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <input name="name" required placeholder="Full name" className="input" />
-                    <input name="email" type="email" required placeholder="Email" className="input" />
+                    <input
+                      name="name"
+                      required
+                      autoComplete="name"
+                      placeholder="Full name *"
+                      className="input"
+                    />
+                    <input
+                      name="email"
+                      type="email"
+                      required
+                      autoComplete="email"
+                      inputMode="email"
+                      placeholder="Email *"
+                      className="input"
+                    />
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <input name="phone" placeholder="Phone / WhatsApp" className="input" />

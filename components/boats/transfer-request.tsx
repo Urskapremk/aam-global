@@ -214,24 +214,29 @@ export function TransferRequest() {
               <div className="grid gap-5 sm:grid-cols-2">
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-foreground">
-                    Full name
+                    Full name <span className="text-destructive">*</span>
                   </label>
                   <input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Alberto Tomba"
+                    required
+                    autoComplete="name"
                     className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-accent"
                   />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-foreground">
-                    Email
+                    Email <span className="text-destructive">*</span>
                   </label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
+                    required
+                    autoComplete="email"
+                    inputMode="email"
                     className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-accent"
                   />
                 </div>
