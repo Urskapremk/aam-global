@@ -962,9 +962,8 @@ function ymd(y: number, m: number, d: number) {
 
 /**
  * Interactive availability calendar. Click any day to close it (turns red /
- * unavailable) or reopen it. Days with a real confirmed customer booking are
- * shown as booked and can't be reopened from here. Also blocks/opens the whole
- * visible month in one click.
+ * unavailable) or reopen it. Days with a confirmed customer booking open the
+ * guest card. Also blocks/opens the whole visible month in one click.
  */
 function AvailabilityCalendar({
   bookings,
@@ -979,17 +978,24 @@ function AvailabilityCalendar({
   const [year, setYear] = useState(now.getFullYear())
   const [busyDate, setBusyDate] = useState<string | null>(null)
   const [busyMonth, setBusyMonth] = useState(false)
+  const [guestBookings, setGuestBookings] = useState<BoatBooking[] | null>(null)
 
   // Sets of dates for the SELECTED boat only — each boat is independent.
-  const { blocked, booked } = useMemo(() => {
+  const { blocked, booked, bookedByDate } = useMemo(() => {
     const blocked = new Set<string>()
     const booked = new Set<string>()
+    const bookedByDate = new Map<string, BoatBooking[]>()
     for (const b of bookings) {
       if (b.boat !== boat) continue
       if (b.status === 'blocked') blocked.add(b.date)
-      else if (b.status === 'confirmed') booked.add(b.date)
+      else if (b.status === 'confirmed') {
+        booked.add(b.date)
+        const list = bookedByDate.get(b.date) ?? []
+        list.push(b)
+        bookedByDate.set(b.date, list)
+      }
     }
-    return { blocked, booked }
+    return { blocked, booked, bookedByDate }
   }, [bookings, boat])
 
   const cells = useMemo(() => buildCalendar(year, month), [year, month])
@@ -1007,7 +1013,11 @@ function AvailabilityCalendar({
   }, [year, month, totalDays, blocked, booked, today])
 
   async function toggleDay(dateKey: string) {
-    if (booked.has(dateKey)) return // real booking — manage it in the list
+    const dayBookings = bookedByDate.get(dateKey)
+    if (dayBookings?.length) {
+      setGuestBookings(dayBookings)
+      return
+    }
     setBusyDate(dateKey)
     const res = await setBlockedDays(boat, [dateKey], !blocked.has(dateKey))
     setBusyDate(null)
@@ -1049,11 +1059,11 @@ function AvailabilityCalendar({
     <div className="mb-6 rounded-2xl border border-border bg-card p-5">
       <div className="mb-1 flex items-center gap-2 text-sm font-medium text-foreground">
         <CalendarDays className="h-4 w-4 text-accent" strokeWidth={1.5} />
-        Availability — tap a day to close or open it
+        Availability — tap a day to close, open, or view a guest
       </div>
       <p className="mb-4 text-xs text-muted-foreground">
         Each boat has its own calendar. Closed days turn red and disappear from
-        the public calendar for the selected boat only.
+        the public calendar. Amber booked days open the guest card.
       </p>
 
       {/* Boat selector — each boat is booked independently */}
@@ -1149,17 +1159,17 @@ function AvailabilityCalendar({
             <button
               key={key}
               type="button"
-              disabled={isPast || isBooked || busy}
+              disabled={(isPast && !isBooked) || busy}
               onClick={() => toggleDay(key)}
-              aria-label={`${key}${isBlocked ? ' — closed' : isBooked ? ' — booked' : ' — open'}`}
+              aria-label={`${key}${isBlocked ? ' — closed' : isBooked ? ' — booked, view guest' : ' — open'}`}
               className={cn(
                 'relative flex aspect-square items-center justify-center rounded-lg text-sm font-medium transition-colors',
-                isPast && 'cursor-not-allowed text-muted-foreground/30',
-                !isPast &&
-                  isBooked &&
-                  'cursor-not-allowed bg-amber-100 text-amber-800',
+                isPast && !isBooked && 'cursor-not-allowed text-muted-foreground/30',
+                isBooked &&
+                  'bg-amber-100 text-amber-800 hover:bg-amber-200 cursor-pointer',
                 !isPast &&
                   isBlocked &&
+                  !isBooked &&
                   'bg-red-600 text-white hover:bg-red-700',
                 !isPast &&
                   !isBooked &&
@@ -1186,8 +1196,160 @@ function AvailabilityCalendar({
           <span className="h-3 w-3 rounded bg-red-600" /> Closed
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded bg-amber-100" /> Booked
+          <span className="h-3 w-3 rounded bg-amber-100" /> Booked — tap for guest
         </span>
+      </div>
+
+      {guestBookings && (
+        <GuestBookingCard
+          bookings={guestBookings}
+          onClose={() => setGuestBookings(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+/** Guest details for a confirmed booking day opened from the calendar. */
+function GuestBookingCard({
+  bookings,
+  onClose,
+}: {
+  bookings: BoatBooking[]
+  onClose: () => void
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-primary/40 p-4 backdrop-blur-sm sm:items-center"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Guest booking"
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-background shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 flex items-center justify-between border-b border-border bg-background px-5 py-4">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              Guest card
+            </p>
+            <h3 className="font-serif text-xl text-foreground">
+              {formatDate(bookings[0].date)}
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <ul className="flex flex-col gap-4 p-5">
+          {bookings.map((b) => (
+            <li
+              key={b.id}
+              className="rounded-xl border border-border bg-card p-4"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                  {b.status}
+                </span>
+                <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                  <Ship className="h-4 w-4 text-accent" strokeWidth={1.5} />
+                  {boatName(b.boat)}
+                </span>
+              </div>
+
+              <p className="mt-3 font-serif text-2xl text-foreground">{b.name}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {tripLabel(b.tripType)}
+                {b.departureTime ? ` · ${b.departureTime}` : ''}
+              </p>
+
+              <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 text-sm">
+                {b.email && (
+                  <a
+                    href={`mailto:${b.email}`}
+                    className="flex items-center gap-2 text-foreground transition-colors hover:text-accent"
+                  >
+                    <Mail className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+                    {b.email}
+                  </a>
+                )}
+                {b.phone && (
+                  <a
+                    href={`tel:${b.phone}`}
+                    className="flex items-center gap-2 text-foreground transition-colors hover:text-accent"
+                  >
+                    <Phone className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+                    {b.phone}
+                  </a>
+                )}
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Users className="h-4 w-4" strokeWidth={1.5} />
+                  {b.guests} {b.guests === 1 ? 'guest' : 'guests'}
+                </span>
+                {b.priceEur != null && (
+                  <span className="flex items-center gap-2 font-medium text-foreground">
+                    <Euro className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+                    €{b.priceEur}
+                    {b.paymentMethod
+                      ? ` · ${paymentMethodLabel(b.paymentMethod)}`
+                      : ''}
+                    {b.paymentStatus ? ` · ${b.paymentStatus}` : ''}
+                  </span>
+                )}
+              </div>
+
+              {(!b.ownEquipment ||
+                b.swimmer ||
+                b.seasickness ||
+                b.fishingExperience) && (
+                <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                  {!b.ownEquipment && (
+                    <span className="rounded-full bg-sky-100 px-2 py-0.5 font-medium text-sky-700">
+                      Gear rental
+                    </span>
+                  )}
+                  {b.swimmer && (
+                    <span className="rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">
+                      Swimmer: {b.swimmer === 'yes' ? 'yes' : 'no'}
+                    </span>
+                  )}
+                  {b.seasickness && (
+                    <span className="rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">
+                      Seasickness: {b.seasickness === 'yes' ? 'yes' : 'no'}
+                    </span>
+                  )}
+                  {b.fishingExperience && (
+                    <span className="rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">
+                      Big game: {b.fishingExperience === 'yes' ? 'yes' : 'no'}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {b.message && (
+                <p className="mt-3 whitespace-pre-wrap rounded-lg bg-secondary p-3 text-sm text-foreground">
+                  {b.message}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   )
