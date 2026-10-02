@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useRef, useEffect, useId } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Upload, X, Loader2, ClipboardPaste } from 'lucide-react'
 import { uploadImage } from '@/app/actions/upload'
-import { shrinkImageToDataUrl, dataUrlToFile } from '@/lib/image-client'
 
 function imageFromClipboardData(data: DataTransfer | null): File | null {
   if (!data) return null
@@ -19,19 +18,6 @@ function imageFromClipboardData(data: DataTransfer | null): File | null {
     }
   }
   return null
-}
-
-// Several upload fields can listen for Ctrl+V on the same page; only the one the
-// user last interacted with (or the first mounted) may take the pasted image.
-const pasteFieldIds: string[] = []
-let activePasteFieldId: string | null = null
-
-function isPasteTarget(id: string) {
-  const target =
-    activePasteFieldId && pasteFieldIds.includes(activePasteFieldId)
-      ? activePasteFieldId
-      : pasteFieldIds[0]
-  return target === id
 }
 
 export function ImageUpload({
@@ -50,7 +36,6 @@ export function ImageUpload({
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const uploadingRef = useRef(false)
-  const fieldId = useId()
 
   async function handleFile(file: File) {
     if (uploadingRef.current) return
@@ -58,24 +43,12 @@ export function ImageUpload({
     setError(null)
     setUploading(true)
     try {
-      // Screenshots are multi-MB PNGs; Server Action bodies are capped, so
-      // shrink to a JPEG first. GIF/SVG are kept as-is (animation/vector).
-      let toSend = file
-      if (!/image\/(gif|svg)/.test(file.type)) {
-        try {
-          const dataUrl = await shrinkImageToDataUrl(file, 1920, 0.85)
-          toSend = dataUrlToFile(dataUrl, `${file.name.replace(/\.[^.]+$/, '')}.jpg`)
-        } catch {
-          toSend = file
-        }
-      }
       const fd = new FormData()
-      fd.append('file', toSend)
+      fd.append('file', file)
       const res = await uploadImage(fd)
       if (res.error) setError(res.error)
       else if (res.url) onChange(res.url)
-    } catch (err) {
-      console.error('Image upload failed:', err)
+    } catch {
       setError('Nalaganje ni uspelo.')
     } finally {
       uploadingRef.current = false
@@ -83,55 +56,29 @@ export function ImageUpload({
     }
   }
 
-  const [pasteBoxOpen, setPasteBoxOpen] = useState(false)
-  const pasteBoxRef = useRef<HTMLTextAreaElement>(null)
-
-  useEffect(() => {
-    if (pasteBoxOpen) pasteBoxRef.current?.focus()
-  }, [pasteBoxOpen])
-
   async function pasteFromClipboard() {
     setError(null)
-    // Embedded previews often block navigator.clipboard.read; a focused
-    // editable box always receives a real paste event on Ctrl+V.
-    if (navigator.clipboard?.read) {
-      try {
-        const items = await navigator.clipboard.read()
-        for (const item of items) {
-          const type = item.types.find((t) => t.startsWith('image/'))
-          if (type) {
-            const blob = await item.getType(type)
-            const ext = type.split('/')[1] || 'png'
-            await handleFile(
-              new File([blob], `screenshot-${Date.now()}.${ext}`, { type }),
-            )
-            return
-          }
-        }
-      } catch {
-        // fall through to the paste box
-      }
-    }
-    setPasteBoxOpen(true)
-  }
-
-  function onBoxPaste(e: React.ClipboardEvent) {
-    const file = imageFromClipboardData(e.clipboardData)
-    e.preventDefault()
-    if (!file) {
-      setError('V odložišču ni slike. Najprej naredite posnetek zaslona.')
+    if (!navigator.clipboard?.read) {
+      setError('Brskalnik ne podpira branja odložišča — pritisnite Ctrl+V.')
       return
     }
-    setPasteBoxOpen(false)
-    handleFile(file)
-  }
-
-  function onDrop(e: React.DragEvent) {
-    e.preventDefault()
-    const file = Array.from(e.dataTransfer.files).find((f) =>
-      f.type.startsWith('image/'),
-    )
-    if (file) handleFile(file)
+    try {
+      const items = await navigator.clipboard.read()
+      for (const item of items) {
+        const type = item.types.find((t) => t.startsWith('image/'))
+        if (type) {
+          const blob = await item.getType(type)
+          const ext = type.split('/')[1] || 'png'
+          await handleFile(
+            new File([blob], `screenshot-${Date.now()}.${ext}`, { type }),
+          )
+          return
+        }
+      }
+      setError('V odložišču ni slike. Najprej naredite posnetek zaslona.')
+    } catch {
+      setError('Dostop do odložišča zavrnjen — pritisnite Ctrl+V.')
+    }
   }
 
   // Only reacts when the clipboard holds an image, so text pastes into other
@@ -140,32 +87,18 @@ export function ImageUpload({
   handleFileRef.current = handleFile
   useEffect(() => {
     if (!listenPaste) return
-    pasteFieldIds.push(fieldId)
     function onPaste(e: ClipboardEvent) {
-      if (!isPasteTarget(fieldId)) return
       const file = imageFromClipboardData(e.clipboardData)
       if (!file) return
       e.preventDefault()
       handleFileRef.current(file)
     }
     document.addEventListener('paste', onPaste)
-    return () => {
-      document.removeEventListener('paste', onPaste)
-      const i = pasteFieldIds.indexOf(fieldId)
-      if (i >= 0) pasteFieldIds.splice(i, 1)
-      if (activePasteFieldId === fieldId) activePasteFieldId = null
-    }
-  }, [listenPaste, fieldId])
+    return () => document.removeEventListener('paste', onPaste)
+  }, [listenPaste])
 
   return (
-    <div
-      onPointerDownCapture={() => {
-        activePasteFieldId = fieldId
-      }}
-      onFocusCapture={() => {
-        activePasteFieldId = fieldId
-      }}
-    >
+    <div>
       <label className="mb-1.5 block text-sm font-medium text-foreground">
         {label}
       </label>
@@ -199,8 +132,6 @@ export function ImageUpload({
                 handleFile(file)
               }
             }}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={onDrop}
             disabled={uploading}
             className="flex h-36 w-52 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-secondary text-sm text-muted-foreground transition-colors hover:border-accent hover:text-foreground"
           >
@@ -241,33 +172,6 @@ export function ImageUpload({
           e.target.value = ''
         }}
       />
-
-      {pasteBoxOpen && !uploading && (
-        <div className="mt-2 flex items-start gap-2">
-          <textarea
-            ref={pasteBoxRef}
-            onPaste={onBoxPaste}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') setPasteBoxOpen(false)
-              else if (!(e.ctrlKey || e.metaKey)) e.preventDefault()
-            }}
-            onBlur={() => setPasteBoxOpen(false)}
-            aria-label="Prilepite sliko s Ctrl+V"
-            placeholder="Kliknite sem in pritisnite Ctrl+V (Mac: Cmd+V)"
-            rows={2}
-            className="w-52 resize-none rounded-lg border-2 border-dashed border-accent bg-background px-3 py-2 text-sm text-foreground caret-transparent placeholder:text-muted-foreground focus:outline-none"
-          />
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setPasteBoxOpen(false)}
-            aria-label="Zapri"
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
 
       {error && <p className="mt-1.5 text-sm text-red-500">{error}</p>}
     </div>

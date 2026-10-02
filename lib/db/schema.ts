@@ -88,17 +88,8 @@ export const shopProducts = pgTable('shop_products', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
   category: text('category').notNull().default('Accessories'),
-  price: integer('price').notNull().default(0), // EUR, derived from priceAr when set
-  priceAr: integer('priceAr').notNull().default(0), // base price in Ariary
-  // Admin-only costing (Ariary); never exposed on the public shop.
-  costAr: integer('costAr').notNull().default(0),
-  transportAr: integer('transportAr').notNull().default(0),
-  customsAr: integer('customsAr').notNull().default(0),
-  marginPct: doublePrecision('marginPct').notNull().default(0),
-  // Pieces on hand; null = not tracked yet (never shown as sold out).
-  stock: integer('stock'),
+  price: integer('price').notNull().default(0), // EUR, whole euros
   image: text('image'), // Blob URL
-  image2: text('image2'), // optional second photo
   alt: text('alt').notNull().default(''),
   description: text('description').notNull().default(''),
   featured: boolean('featured').notNull().default(false),
@@ -106,18 +97,6 @@ export const shopProducts = pgTable('shop_products', {
   published: boolean('published').notNull().default(true),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
-})
-
-// Stock ledger per shop product: sales, receipts and stock counts.
-export const shopStockMoves = pgTable('shop_stock_moves', {
-  id: serial('id').primaryKey(),
-  productId: integer('productId').notNull(),
-  kind: text('kind').notNull(), // 'sale' | 'receipt' | 'count'
-  delta: integer('delta').notNull(), // signed change in pieces
-  stockAfter: integer('stockAfter').notNull(),
-  priceAr: integer('priceAr').notNull().default(0), // unit selling price at time of sale
-  note: text('note').notNull().default(''),
-  createdAt: timestamp('createdAt').notNull().defaultNow(),
 })
 
 // Editable site texts + images, keyed by a stable string (e.g. "home.hero.title").

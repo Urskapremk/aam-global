@@ -17,7 +17,6 @@ import {
   ShieldCheck,
   Coins,
   Globe,
-  IdCard,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -95,9 +94,6 @@ export const NAV: NavNode[] = [
       // Crew payroll: hours off the trips turned into money. `Users` because
       // the row is a person.
       { href: '/admin/crew', label: 'Crew payroll', icon: Users },
-      // HR department: staff records, Madagascar payroll, contracts, leave and
-      // the employer register, built on the same crew names as Crew payroll.
-      { href: '/admin/hr', label: 'HR department', icon: IdCard },
       // Compliance & logbooks: trips, catches, documents and safety records
       // turned into the official record for each vessel. `ShieldCheck` because
       // this is the screen that certifies the boat is legal.

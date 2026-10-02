@@ -2,7 +2,6 @@ export type ProductCategory =
   | 'Rods & Reels'
   | 'Lines & Leaders'
   | 'Lures & Baits'
-  | 'Hooks'
   | 'Terminal Tackle'
   | 'Apparel'
   | 'Accessories'
@@ -11,26 +10,19 @@ export type Product = {
   id: string
   name: string
   category: ProductCategory
-  /** Price in EUR (derived from priceAr at the current rate when set) */
+  /** Price in EUR */
   price: number
-  /** Base price in Ariary */
-  priceAr?: number
   image: string
-  /** Optional second photo */
-  image2?: string
   alt: string
   description: string
   /** Optional: mark a few products as featured on the shop landing */
   featured?: boolean
-  /** True when stock is tracked and has run out */
-  soldOut?: boolean
 }
 
 export const PRODUCT_CATEGORIES: ProductCategory[] = [
   'Rods & Reels',
   'Lines & Leaders',
   'Lures & Baits',
-  'Hooks',
   'Terminal Tackle',
   'Apparel',
   'Accessories',
@@ -42,43 +34,25 @@ type DbProductRow = {
   name: string
   category: string
   price: number
-  priceAr?: number | null
   image: string | null
-  image2?: string | null
   alt: string
   description: string
   featured: boolean
-  soldOut?: boolean
 }
 
-/**
- * Map a DB row into the shape the storefront + cart use (string id `db-<id>`).
- * Ariary is the base price; EUR is recalculated at the current rate.
- */
-export function toProduct(row: DbProductRow, arPerEur?: number): Product {
-  const hasAr = (row.priceAr ?? 0) > 0
-  const rate = arPerEur && arPerEur > 0 ? arPerEur : 0
-  const price =
-    hasAr && rate ? Math.round((row.priceAr! / rate) * 100) / 100 : row.price
-  const priceAr = hasAr
-    ? row.priceAr!
-    : rate
-      ? Math.round(row.price * rate)
-      : undefined
+/** Map a DB row into the shape the storefront + cart use (string id `db-<id>`). */
+export function toProduct(row: DbProductRow): Product {
   return {
     id: `db-${row.id}`,
     name: row.name,
     category: (PRODUCT_CATEGORIES.includes(row.category as ProductCategory)
       ? row.category
       : 'Accessories') as ProductCategory,
-    price,
-    priceAr,
+    price: row.price,
     image: row.image || '/placeholder.svg?height=800&width=800',
-    image2: row.image2 || undefined,
     alt: row.alt || row.name,
     description: row.description,
     featured: row.featured,
-    soldOut: row.soldOut ?? false,
   }
 }
 
