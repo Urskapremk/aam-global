@@ -16,6 +16,7 @@ import {
   Tag,
   Check,
   Search,
+  CheckCircle2,
 } from 'lucide-react'
 import {
   markRead,
@@ -24,6 +25,7 @@ import {
   sendMessage,
   refreshInbox,
   moveToFolder,
+  setOrderCompleted,
   type Folder,
 } from '@/app/actions/messages'
 import { setMessageLabel, createLabel } from '@/app/actions/mail-organize'
@@ -78,6 +80,44 @@ function fmtDate(d: string | Date) {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+type OrderLine = { name: string; quantity: number; lineTotal: number }
+
+function parseOrderMeta(meta: string): Record<string, unknown> | null {
+  if (!meta) return null
+  try {
+    const parsed = JSON.parse(meta)
+    return parsed && typeof parsed === 'object'
+      ? (parsed as Record<string, unknown>)
+      : null
+  } catch {
+    return null
+  }
+}
+
+/** Open orders keep the stamp until an admin marks them completed. */
+function isOrderCompleted(meta: string): boolean {
+  return parseOrderMeta(meta)?.completed === true
+}
+
+function withOrderCompleted(meta: string, completed: boolean): string {
+  const base = parseOrderMeta(meta) ?? {}
+  if (completed) {
+    base.completed = true
+    base.completedAt = new Date().toISOString()
+  } else {
+    delete base.completed
+    delete base.completedAt
+  }
+  return JSON.stringify(base)
+}
+
+function parseOrderLines(meta: string): OrderLine[] | null {
+  const parsed = parseOrderMeta(meta)
+  if (!parsed) return null
+  if (Array.isArray(parsed.lines)) return parsed.lines as OrderLine[]
+  return null
 }
 
 export function InboxManager({
@@ -170,6 +210,14 @@ export function InboxManager({
     patchMessage(m.id, { labels: nextLabels })
     startTransition(() => {
       setMessageLabel(m.id, label.id, on)
+    })
+  }
+
+  function handleSetOrderCompleted(m: Message, completed: boolean) {
+    const nextMeta = withOrderCompleted(m.meta, completed)
+    patchMessage(m.id, { meta: nextMeta })
+    startTransition(() => {
+      void setOrderCompleted(m.id, completed)
     })
   }
 
@@ -324,15 +372,29 @@ export function InboxManager({
               }
               onDragEnd={draggable ? () => setDraggingId(null) : undefined}
               className={cn(
-                'flex w-full flex-col gap-1 rounded-lg border p-3 text-left transition-colors',
+                'relative flex w-full flex-col gap-1 rounded-lg border p-3 text-left transition-colors',
                 active
                   ? 'border-accent bg-accent/5'
                   : 'border-border hover:border-accent/50',
                 !m.read && m.direction === 'inbound' && 'bg-accent/[0.03]',
+                m.source === 'order' &&
+                  m.direction === 'inbound' &&
+                  !isOrderCompleted(m.meta) &&
+                  'pr-24',
                 draggable && 'cursor-grab active:cursor-grabbing',
                 draggingId === m.id && 'opacity-50',
               )}
             >
+              {m.source === 'order' &&
+                m.direction === 'inbound' &&
+                !isOrderCompleted(m.meta) && (
+                  <span
+                    className="pointer-events-none absolute right-2 top-1/2 z-10 -translate-y-1/2 -rotate-[18deg] select-none rounded-[3px] border-[2.5px] border-red-700/75 px-2.5 py-1 font-serif text-[10px] font-bold uppercase leading-none tracking-[0.2em] text-red-700/80 shadow-[inset_0_0_0_1px_rgba(185,28,28,0.35)]"
+                    aria-label={t('New order')}
+                  >
+                    {t('New order')}
+                  </span>
+                )}
               <div className="flex items-center gap-2">
                 <Icon
                   className="h-3.5 w-3.5 text-muted-foreground"
@@ -417,6 +479,9 @@ export function InboxManager({
               onCreateLabel={(name, color) =>
                 handleCreateLabel(selected, name, color)
               }
+              onSetOrderCompleted={(completed) =>
+                handleSetOrderCompleted(selected, completed)
+              }
             />
           </>
         )}
@@ -436,6 +501,7 @@ function MessageDetail({
   onMoveToFolder,
   onToggleLabel,
   onCreateLabel,
+  onSetOrderCompleted,
 }: {
   message: Message
   isTrash: boolean
@@ -450,6 +516,7 @@ function MessageDetail({
     name: string,
     color: string,
   ) => Promise<{ ok: boolean; error?: string }>
+  onSetOrderCompleted: (completed: boolean) => void
 }) {
   const t = useT()
   const [mode, setMode] = useState<'none' | 'reply' | 'forward'>('none')
@@ -476,6 +543,8 @@ function MessageDetail({
   }
 
   const orderLines = parseOrderLines(message.meta)
+  const orderCompleted = isOrderCompleted(message.meta)
+  const isOrder = message.source === 'order' && message.direction === 'inbound'
   const isInbound = message.direction === 'inbound'
   const labelIds = new Set(message.labels.map((l) => l.id))
 
@@ -732,6 +801,11 @@ function MessageDetail({
         <div className="rounded-lg border border-border bg-secondary/50 p-4">
           <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {t('Order')}
+            {orderCompleted && (
+              <span className="ml-2 font-normal normal-case tracking-normal text-muted-foreground">
+                · {t('Completed')}
+              </span>
+            )}
           </h3>
           <ul className="flex flex-col gap-1 text-sm">
             {orderLines.map((l, i) => (
@@ -752,6 +826,22 @@ function MessageDetail({
         <div className="border-t border-border pt-4">
           {mode === 'none' ? (
             <div className="flex flex-wrap items-center gap-2">
+              {isOrder && (
+                <button
+                  type="button"
+                  onClick={() => onSetOrderCompleted(!orderCompleted)}
+                  disabled={pending}
+                  className={cn(
+                    'inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors',
+                    orderCompleted
+                      ? 'border border-border text-foreground hover:bg-muted'
+                      : 'bg-accent text-accent-foreground hover:opacity-90',
+                  )}
+                >
+                  <CheckCircle2 className="h-4 w-4" strokeWidth={1.5} />
+                  {orderCompleted ? t('Reopen order') : t('Mark completed')}
+                </button>
+              )}
               {message.direction === 'inbound' && (
                 <button
                   onClick={startReply}
@@ -852,17 +942,4 @@ function buildForwardBody(m: Message): string {
   return `\n\n---------- Forwarded message ----------\n${who}\nDate: ${fmtDate(
     m.createdAt,
   )}\nSubject: ${m.subject}\n\n${m.body}`
-}
-
-type OrderLine = { name: string; quantity: number; lineTotal: number }
-
-function parseOrderLines(meta: string): OrderLine[] | null {
-  if (!meta) return null
-  try {
-    const parsed = JSON.parse(meta)
-    if (Array.isArray(parsed?.lines)) return parsed.lines as OrderLine[]
-    return null
-  } catch {
-    return null
-  }
 }
