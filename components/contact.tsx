@@ -131,22 +131,25 @@ export function Contact() {
             ) : (
               <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                 <div className="grid gap-5 sm:grid-cols-2">
-                  <Field label="Full name" htmlFor="name">
+                  <Field label="Full name" htmlFor="name" required>
                     <input
                       id="name"
                       name="name"
                       type="text"
                       required
+                      autoComplete="name"
                       placeholder="Jane Doe"
                       className="input-base"
                     />
                   </Field>
-                  <Field label="Email" htmlFor="email">
+                  <Field label="Email" htmlFor="email" required>
                     <input
                       id="email"
                       name="email"
                       type="email"
                       required
+                      autoComplete="email"
+                      inputMode="email"
                       placeholder="jane@email.com"
                       className="input-base"
                     />
@@ -207,15 +210,25 @@ export function Contact() {
 function Field({
   label,
   htmlFor,
+  required,
   children,
 }: {
   label: string
   htmlFor: string
+  required?: boolean
   children: React.ReactNode
 }) {
   return (
     <label htmlFor={htmlFor} className="flex flex-col gap-2">
-      <span className="text-sm font-medium text-foreground">{label}</span>
+      <span className="text-sm font-medium text-foreground">
+        {label}
+        {required ? (
+          <span className="text-destructive" aria-hidden="true">
+            {' '}
+            *
+          </span>
+        ) : null}
+      </span>
       {children}
     </label>
   )

@@ -449,7 +449,7 @@ function RequestForm({
         </div>
         <div>
           <label htmlFor="bk-email" className="mb-2 block text-sm font-medium text-foreground">
-            Email
+            Email <span className="text-destructive">*</span>
           </label>
           <input
             id="bk-email"
@@ -459,6 +459,8 @@ function RequestForm({
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             required
+            autoComplete="email"
+            inputMode="email"
           />
         </div>
         <div>
