@@ -63,6 +63,7 @@ export function CartDrawer() {
           lineTotal: i.product.price * i.quantity,
         })),
         total: subtotal,
+        completed: false,
       },
     }).catch(() => {})
 

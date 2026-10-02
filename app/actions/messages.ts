@@ -208,6 +208,45 @@ export async function markRead(id: number, read = true) {
   revalidatePath('/admin/inbox')
 }
 
+/**
+ * Mark a shop/WhatsApp order as completed (or reopen it). Stored in message
+ * meta so the "New order" stamp stays until the admin explicitly closes it —
+ * opening/reading the message alone must not clear the stamp.
+ */
+export async function setOrderCompleted(id: number, completed: boolean) {
+  await requireAdmin()
+  const [row] = await db
+    .select({ meta: messages.meta, source: messages.source })
+    .from(messages)
+    .where(eq(messages.id, id))
+    .limit(1)
+  if (!row || row.source !== 'order') {
+    return { ok: false as const, error: 'Not an order message.' }
+  }
+  let meta: Record<string, unknown> = {}
+  if (row.meta) {
+    try {
+      const parsed = JSON.parse(row.meta)
+      if (parsed && typeof parsed === 'object') meta = parsed
+    } catch {
+      meta = {}
+    }
+  }
+  if (completed) {
+    meta.completed = true
+    meta.completedAt = new Date().toISOString()
+  } else {
+    delete meta.completed
+    delete meta.completedAt
+  }
+  await db
+    .update(messages)
+    .set({ meta: JSON.stringify(meta) })
+    .where(eq(messages.id, id))
+  revalidatePath('/admin/inbox')
+  return { ok: true as const, meta: JSON.stringify(meta) }
+}
+
 export async function setArchived(id: number, archived = true) {
   await requireAdmin()
   await db.update(messages).set({ archived }).where(eq(messages.id, id))
