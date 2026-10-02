@@ -324,7 +324,7 @@ export function InboxManager({
               }
               onDragEnd={draggable ? () => setDraggingId(null) : undefined}
               className={cn(
-                'relative flex w-full flex-col gap-1 overflow-hidden rounded-lg border p-3 text-left transition-colors',
+                'relative flex w-full flex-col gap-1 rounded-lg border p-3 text-left transition-colors',
                 active
                   ? 'border-accent bg-accent/5'
                   : 'border-border hover:border-accent/50',
@@ -332,7 +332,7 @@ export function InboxManager({
                 m.source === 'order' &&
                   !m.read &&
                   m.direction === 'inbound' &&
-                  'pr-12',
+                  'pr-24',
                 draggable && 'cursor-grab active:cursor-grabbing',
                 draggingId === m.id && 'opacity-50',
               )}
@@ -341,12 +341,10 @@ export function InboxManager({
                 !m.read &&
                 m.direction === 'inbound' && (
                   <span
-                    className="pointer-events-none absolute right-0 top-0 bottom-0 flex w-9 items-center justify-center bg-accent text-[9px] font-semibold uppercase tracking-[0.14em] text-accent-foreground"
+                    className="pointer-events-none absolute right-2 top-1/2 z-10 -translate-y-1/2 -rotate-[18deg] select-none rounded-[3px] border-[2.5px] border-red-700/75 px-2.5 py-1 font-serif text-[10px] font-bold uppercase leading-none tracking-[0.2em] text-red-700/80 shadow-[inset_0_0_0_1px_rgba(185,28,28,0.35)]"
                     aria-label={t('New order')}
                   >
-                    <span className="rotate-90 whitespace-nowrap">
-                      {t('New order')}
-                    </span>
+                    {t('New order')}
                   </span>
                 )}
               <div className="flex items-center gap-2">
