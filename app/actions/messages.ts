@@ -289,7 +289,7 @@ function composeHtml(subject: string, body: string, html?: string) {
   const innerHtml =
     html && html.trim()
       ? html
-      : `<p style="white-space:pre-wrap;margin:0;color:#2f3b48;background-color:#ffffff">${escapeHtml(body)}</p>`
+      : `<p style="white-space:pre-wrap;margin:0;color:#2f3b48;background-color:#fffffe">${escapeHtml(body)}</p>`
   return emailShell(subject || 'Preview', innerHtml)
 }
 
@@ -355,7 +355,7 @@ export async function sendMessage(args: ComposeArgs) {
   const innerHtml =
     args.html && args.html.trim()
       ? args.html
-      : `<p style="white-space:pre-wrap;margin:0;color:#2f3b48;background-color:#ffffff">${escapeHtml(body)}</p>`
+      : `<p style="white-space:pre-wrap;margin:0;color:#2f3b48;background-color:#fffffe">${escapeHtml(body)}</p>`
 
   const result = await sendEmail({
     to: recipients,

@@ -109,26 +109,28 @@ export const BRAND_LOCATION = 'Nosy Komba, Madagascar'
 
 /**
  * Branded HTML wrapper for outgoing emails — soft coastal light theme.
- * Soft sky header + white body + pale footer so messages stay pleasant in
- * typical mail apps (and resist dark-mode inversion better than a navy block).
+ *
+ * Uses hosted PNG brand marks (not Iconify SVG — often missing in mail apps)
+ * and off-white #fffffe cells so Gmail/Apple dark mode is less likely to
+ * invert the whole message to near-black.
  */
 export function emailShell(title: string, bodyHtml: string): string {
   const NAVY = '#1e3a5f'
   const INK = '#2f3b48'
-  const MUTED = '#6b7a8a'
-  const SKY = '#eef5fb'
-  const PAPER = '#ffffff'
-  const FOOT = '#f7fafc'
-  const LINE = '#dce6f0'
-  const OUTER = '#e4eef6'
+  const MUTED = '#5c6b7a'
+  // Slightly off-white / tinted lights — many clients skip full inversion.
+  const SKY = '#e8f2fa'
+  const PAPER = '#fffffe'
+  const FOOT = '#f3f7fb'
+  const LINE = '#c9d7e6'
+  const OUTER = '#dceaf4'
   const SERIF = `'Cormorant Garamond', Cormorant, Georgia, 'Times New Roman', serif`
   const SANS = `-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`
-  const anchor = (color: string, size: number) =>
-    `<img width="${size}" height="${size}" alt="" style="display:inline-block;vertical-align:middle;border:0" src="https://api.iconify.design/lucide/anchor.svg?color=${encodeURIComponent(color)}&width=${size}&height=${size}" />`
+  // Production PNG (works in Gmail/Apple/Outlook). Alt text keeps “sidro” readable if blocked.
+  const logo = (size: number) =>
+    `<img src="https://www.aamglobalgroup.com/images/aam-icon-192.png" width="${size}" height="${size}" alt="⚓" style="display:inline-block;vertical-align:middle;border:0;outline:none;text-decoration:none;width:${size}px;height:${size}px" />`
 
-  // Wrap reply body so text colour/background stay light even if a client
-  // tries to invert the outer table cells.
-  const body = `<div class="dm-white dm-ink" style="background-color:${PAPER};color:${INK};font-family:${SANS};font-size:16px;font-weight:400;line-height:1.75">${bodyHtml}</div>`
+  const body = `<div style="background-color:${PAPER};color:${INK};font-family:${SANS};font-size:16px;font-weight:400;line-height:1.75">${bodyHtml}</div>`
 
   return `<!doctype html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
@@ -137,72 +139,69 @@ export function emailShell(title: string, bodyHtml: string): string {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light only" />
     <meta name="supported-color-schemes" content="light only" />
-    <style>
+    <style type="text/css">
       @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
-      :root { color-scheme: light only; supported-color-schemes: light only; }
-      body, table, td, div, p, a, span { color-scheme: light only; }
-
-      /* Outlook.com / new Outlook dark mode */
-      [data-ogsc] .dm-sky,   [data-ogsb] .dm-sky   { background-color:${SKY} !important; }
-      [data-ogsc] .dm-white, [data-ogsb] .dm-white { background-color:${PAPER} !important; }
-      [data-ogsc] .dm-foot,  [data-ogsb] .dm-foot  { background-color:${FOOT} !important; }
-      [data-ogsc] .dm-outer, [data-ogsb] .dm-outer { background-color:${OUTER} !important; }
-      [data-ogsc] .dm-ink   { color:${INK} !important; }
-      [data-ogsc] .dm-muted { color:${MUTED} !important; }
-      [data-ogsc] .dm-brand { color:${NAVY} !important; }
-      [data-ogsc] .dm-eyebrow { color:${MUTED} !important; }
-
-      /* Apple Mail / iOS / some webmail dark modes */
+      :root { color-scheme: light only !important; supported-color-schemes: light only !important; }
+      body, table, td, div, p, a, span, img {
+        color-scheme: light only !important;
+        -webkit-text-size-adjust: 100%;
+      }
+      u + .body .force-light { background-color: ${PAPER} !important; color: ${INK} !important; }
+      [data-ogsc] .force-sky,  [data-ogsb] .force-sky  { background-color: ${SKY} !important; }
+      [data-ogsc] .force-paper,[data-ogsb] .force-paper{ background-color: ${PAPER} !important; }
+      [data-ogsc] .force-foot, [data-ogsb] .force-foot { background-color: ${FOOT} !important; }
+      [data-ogsc] .force-outer,[data-ogsb] .force-outer{ background-color: ${OUTER} !important; }
+      [data-ogsc] .force-ink { color: ${INK} !important; }
+      [data-ogsc] .force-brand { color: ${NAVY} !important; }
+      [data-ogsc] .force-muted { color: ${MUTED} !important; }
       @media (prefers-color-scheme: dark) {
-        .dm-sky   { background-color:${SKY} !important; }
-        .dm-white { background-color:${PAPER} !important; }
-        .dm-foot  { background-color:${FOOT} !important; }
-        .dm-outer { background-color:${OUTER} !important; }
-        .dm-ink   { color:${INK} !important; }
-        .dm-muted { color:${MUTED} !important; }
-        .dm-brand { color:${NAVY} !important; }
-        .dm-eyebrow { color:${MUTED} !important; }
+        .force-sky   { background-color: ${SKY} !important; }
+        .force-paper { background-color: ${PAPER} !important; }
+        .force-foot  { background-color: ${FOOT} !important; }
+        .force-outer { background-color: ${OUTER} !important; }
+        .force-ink   { color: ${INK} !important; }
+        .force-brand { color: ${NAVY} !important; }
+        .force-muted { color: ${MUTED} !important; }
       }
     </style>
     <!--[if !mso]><!-->
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap"
-    />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap" />
     <!--<![endif]-->
   </head>
-  <body class="dm-outer" bgcolor="${OUTER}" style="margin:0;padding:0;background-color:${OUTER};font-family:${SANS};color:${INK};-webkit-text-size-adjust:100%">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${OUTER}" class="dm-outer" style="background-color:${OUTER}">
+  <body class="body force-outer" bgcolor="${OUTER}" style="margin:0;padding:0;background-color:${OUTER};font-family:${SANS};color:${INK}">
+    <div style="display:none;max-height:0;overflow:hidden;mso-hide:all">&nbsp;</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${OUTER}" class="force-outer" style="background-color:${OUTER}">
       <tr>
-        <td align="center" style="padding:36px 16px">
-          <table role="presentation" width="560" cellpadding="0" cellspacing="0" bgcolor="${PAPER}" class="dm-white" style="width:100%;max-width:560px;background-color:${PAPER};border:1px solid ${LINE};border-radius:16px;overflow:hidden">
-            <!-- Soft light header (not a dark navy block) -->
+        <td align="center" bgcolor="${OUTER}" class="force-outer" style="padding:36px 16px;background-color:${OUTER}">
+          <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" bgcolor="${PAPER}" class="force-paper" style="width:100%;max-width:560px;background-color:${PAPER};border:1px solid ${LINE};border-radius:16px">
             <tr>
-              <td bgcolor="${SKY}" class="dm-sky" style="background-color:${SKY};padding:32px 36px 28px;border-bottom:1px solid ${LINE}">
-                <div>
-                  ${anchor(NAVY, 20)}
-                  <span class="dm-brand" style="color:${NAVY};font-family:${SERIF};font-size:22px;font-weight:600;letter-spacing:0.22em;vertical-align:middle;margin-left:10px">AAM</span>
-                </div>
-                <div class="dm-brand" style="color:${NAVY};font-family:${SERIF};font-size:26px;font-weight:500;letter-spacing:0.3px;line-height:1.25;margin-top:18px">${BRAND_NAME}</div>
-                <div class="dm-eyebrow" style="color:${MUTED};font-size:11px;letter-spacing:0.18em;text-transform:uppercase;margin-top:10px">${escapeAttr(title)}</div>
+              <td bgcolor="${SKY}" class="force-sky" style="background-color:${SKY};padding:28px 32px 24px;border-bottom:3px solid ${NAVY}">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td valign="middle" style="padding-right:12px">${logo(36)}</td>
+                    <td valign="middle" class="force-brand" style="color:${NAVY};font-family:${SERIF};font-size:26px;font-weight:700;letter-spacing:0.18em">AAM</td>
+                  </tr>
+                </table>
+                <div class="force-brand" style="color:${NAVY};font-family:${SERIF};font-size:24px;font-weight:500;line-height:1.3;margin-top:16px">${BRAND_NAME}</div>
+                <div class="force-muted" style="color:${MUTED};font-family:${SANS};font-size:12px;letter-spacing:0.12em;text-transform:uppercase;margin-top:8px">${escapeAttr(title)}</div>
               </td>
             </tr>
-            <!-- Body -->
             <tr>
-              <td bgcolor="${PAPER}" class="dm-white dm-ink" style="background-color:${PAPER};padding:36px;color:${INK};font-family:${SANS};font-size:16px;font-weight:400;line-height:1.75">
+              <td bgcolor="${PAPER}" class="force-paper force-ink" style="background-color:${PAPER};padding:32px;color:${INK};font-family:${SANS};font-size:16px;line-height:1.75">
                 ${body}
               </td>
             </tr>
-            <!-- Footer -->
             <tr>
-              <td bgcolor="${FOOT}" class="dm-foot dm-muted" style="background-color:${FOOT};border-top:1px solid ${LINE};padding:26px 36px;color:${MUTED};font-family:${SANS};font-size:12px;line-height:1.7">
-                <div>
-                  ${anchor(NAVY, 15)}
-                  <span class="dm-brand" style="font-family:${SERIF};font-size:16px;font-weight:600;letter-spacing:0.2em;color:${NAVY};vertical-align:middle;margin-left:8px">AAM</span>
-                </div>
-                <div class="dm-ink" style="margin-top:10px;color:${INK};font-size:13px">${BRAND_NAME}</div>
+              <td bgcolor="${FOOT}" class="force-foot force-muted" style="background-color:${FOOT};border-top:1px solid ${LINE};padding:24px 32px;color:${MUTED};font-family:${SANS};font-size:12px;line-height:1.7">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td valign="middle" style="padding-right:10px">${logo(28)}</td>
+                    <td valign="middle" class="force-brand" style="color:${NAVY};font-family:${SERIF};font-size:18px;font-weight:700;letter-spacing:0.18em">AAM</td>
+                  </tr>
+                </table>
+                <div class="force-ink" style="margin-top:12px;color:${INK};font-size:13px">${BRAND_NAME}</div>
                 <div style="margin-top:2px">${BRAND_LOCATION}</div>
-                <div class="dm-ink" style="margin-top:10px;color:${INK}">Team Mike Schneider</div>
+                <div class="force-ink" style="margin-top:10px;color:${INK}">Team Mike Schneider</div>
               </td>
             </tr>
           </table>
