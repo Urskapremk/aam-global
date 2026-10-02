@@ -108,27 +108,30 @@ export const BRAND_NAME = 'African Adventures Madagascar'
 export const BRAND_LOCATION = 'Nosy Komba, Madagascar'
 
 /**
- * Branded HTML wrapper for outgoing emails. Mirrors the website: deep ocean
- * navy (#1e3a5f), a serif "anchor + AAM" logo lockup with wide tracking, a
- * steel-blue accent divider, and a serif brand name (Cormorant → Georgia
- * fallback in email clients). bgcolor attributes are set alongside inline
- * styles so the palette holds up better in dark-mode mail clients.
+ * Branded HTML wrapper for outgoing emails — soft coastal light theme.
+ * Soft sky header + white body + pale footer so messages stay pleasant in
+ * typical mail apps (and resist dark-mode inversion better than a navy block).
  */
 export function emailShell(title: string, bodyHtml: string): string {
-  // Mirror the website exactly: light throughout, brand navy header, and the
-  // Cormorant Garamond serif wordmark. Always light — never a dark theme.
-  const NAVY = '#1e3a5f' // --primary (brand ocean navy, same as the site)
-  const INK = '#3a4653' // body text (soft, not pure black)
-  const MUTED_C = '#8592a0' // --muted-foreground
-  // Cormorant Garamond is loaded below; the wordmark + brand name use it, just
-  // like the site header. Body copy uses the system sans (like the site body).
+  const NAVY = '#1e3a5f'
+  const INK = '#2f3b48'
+  const MUTED = '#6b7a8a'
+  const SKY = '#eef5fb'
+  const PAPER = '#ffffff'
+  const FOOT = '#f7fafc'
+  const LINE = '#dce6f0'
+  const OUTER = '#e4eef6'
   const SERIF = `'Cormorant Garamond', Cormorant, Georgia, 'Times New Roman', serif`
   const SANS = `-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`
-  // Thin, line-drawn anchor matching the site's lucide icon (stroke 1.5).
   const anchor = (color: string, size: number) =>
-    `<img width="${size}" height="${size}" alt="" style="display:inline-block;vertical-align:middle" src="https://api.iconify.design/lucide/anchor.svg?color=${encodeURIComponent(color)}&width=${size}&height=${size}" />`
+    `<img width="${size}" height="${size}" alt="" style="display:inline-block;vertical-align:middle;border:0" src="https://api.iconify.design/lucide/anchor.svg?color=${encodeURIComponent(color)}&width=${size}&height=${size}" />`
+
+  // Wrap reply body so text colour/background stay light even if a client
+  // tries to invert the outer table cells.
+  const body = `<div class="dm-white dm-ink" style="background-color:${PAPER};color:${INK};font-family:${SANS};font-size:16px;font-weight:400;line-height:1.75">${bodyHtml}</div>`
+
   return `<!doctype html>
-<html lang="en">
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -137,29 +140,28 @@ export function emailShell(title: string, bodyHtml: string): string {
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
       :root { color-scheme: light only; supported-color-schemes: light only; }
+      body, table, td, div, p, a, span { color-scheme: light only; }
 
-      /* Stop Outlook.com / new Outlook from inverting the palette in dark mode.
-         Outlook tags recoloured elements with data-ogsc (text) / data-ogsb
-         (background); we re-assert the exact light colours on those elements. */
-      [data-ogsc] .dm-navy,  [data-ogsb] .dm-navy  { background-color:#1e3a5f !important; }
-      [data-ogsc] .dm-white, [data-ogsb] .dm-white { background-color:#ffffff !important; }
-      [data-ogsc] .dm-foot,  [data-ogsb] .dm-foot  { background-color:#f6f8fb !important; }
-      [data-ogsc] .dm-onnavy { color:#ffffff !important; }
-      [data-ogsc] .dm-eyebrow { color:#b7c7d8 !important; }
-      [data-ogsc] .dm-ink   { color:#3a4653 !important; }
-      [data-ogsc] .dm-muted { color:#8592a0 !important; }
-      [data-ogsc] .dm-brand { color:#1e3a5f !important; }
+      /* Outlook.com / new Outlook dark mode */
+      [data-ogsc] .dm-sky,   [data-ogsb] .dm-sky   { background-color:${SKY} !important; }
+      [data-ogsc] .dm-white, [data-ogsb] .dm-white { background-color:${PAPER} !important; }
+      [data-ogsc] .dm-foot,  [data-ogsb] .dm-foot  { background-color:${FOOT} !important; }
+      [data-ogsc] .dm-outer, [data-ogsb] .dm-outer { background-color:${OUTER} !important; }
+      [data-ogsc] .dm-ink   { color:${INK} !important; }
+      [data-ogsc] .dm-muted { color:${MUTED} !important; }
+      [data-ogsc] .dm-brand { color:${NAVY} !important; }
+      [data-ogsc] .dm-eyebrow { color:${MUTED} !important; }
 
-      /* Keep it light in Apple Mail / iOS dark mode too. */
+      /* Apple Mail / iOS / some webmail dark modes */
       @media (prefers-color-scheme: dark) {
-        .dm-navy  { background-color:#1e3a5f !important; }
-        .dm-white { background-color:#ffffff !important; }
-        .dm-foot  { background-color:#f6f8fb !important; }
-        .dm-onnavy { color:#ffffff !important; }
-        .dm-eyebrow { color:#b7c7d8 !important; }
-        .dm-ink   { color:#3a4653 !important; }
-        .dm-muted { color:#8592a0 !important; }
-        .dm-brand { color:#1e3a5f !important; }
+        .dm-sky   { background-color:${SKY} !important; }
+        .dm-white { background-color:${PAPER} !important; }
+        .dm-foot  { background-color:${FOOT} !important; }
+        .dm-outer { background-color:${OUTER} !important; }
+        .dm-ink   { color:${INK} !important; }
+        .dm-muted { color:${MUTED} !important; }
+        .dm-brand { color:${NAVY} !important; }
+        .dm-eyebrow { color:${MUTED} !important; }
       }
     </style>
     <!--[if !mso]><!-->
@@ -169,36 +171,38 @@ export function emailShell(title: string, bodyHtml: string): string {
     />
     <!--<![endif]-->
   </head>
-  <body style="margin:0;padding:0;background-color:#eef3f8;font-family:${SANS};color:${INK};-webkit-text-size-adjust:100%">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#eef3f8" style="background-color:#eef3f8">
+  <body class="dm-outer" bgcolor="${OUTER}" style="margin:0;padding:0;background-color:${OUTER};font-family:${SANS};color:${INK};-webkit-text-size-adjust:100%">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${OUTER}" class="dm-outer" style="background-color:${OUTER}">
       <tr>
-        <td align="center" style="padding:32px 16px">
-          <table role="presentation" width="560" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="width:100%;max-width:560px;background-color:#ffffff;border:1px solid #e6ebf1;border-radius:14px;overflow:hidden">
-            <!-- Header -->
+        <td align="center" style="padding:36px 16px">
+          <table role="presentation" width="560" cellpadding="0" cellspacing="0" bgcolor="${PAPER}" class="dm-white" style="width:100%;max-width:560px;background-color:${PAPER};border:1px solid ${LINE};border-radius:16px;overflow:hidden">
+            <!-- Soft light header (not a dark navy block) -->
             <tr>
-              <td bgcolor="${NAVY}" class="dm-navy" style="background-color:${NAVY};padding:34px 36px 30px">
+              <td bgcolor="${SKY}" class="dm-sky" style="background-color:${SKY};padding:32px 36px 28px;border-bottom:1px solid ${LINE}">
                 <div>
-                  ${anchor('#ffffff', 20)}
-                  <span class="dm-onnavy" style="color:#ffffff;font-family:${SERIF};font-size:24px;font-weight:600;letter-spacing:0.2em;vertical-align:middle;margin-left:10px">AAM</span>
+                  ${anchor(NAVY, 20)}
+                  <span class="dm-brand" style="color:${NAVY};font-family:${SERIF};font-size:22px;font-weight:600;letter-spacing:0.22em;vertical-align:middle;margin-left:10px">AAM</span>
                 </div>
-                <div class="dm-onnavy" style="color:#ffffff;font-family:${SERIF};font-size:28px;font-weight:500;letter-spacing:0.5px;line-height:1.2;margin-top:22px">${BRAND_NAME}</div>
-                <div class="dm-eyebrow" style="color:#b7c7d8;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-top:10px">${escapeAttr(title)}</div>
+                <div class="dm-brand" style="color:${NAVY};font-family:${SERIF};font-size:26px;font-weight:500;letter-spacing:0.3px;line-height:1.25;margin-top:18px">${BRAND_NAME}</div>
+                <div class="dm-eyebrow" style="color:${MUTED};font-size:11px;letter-spacing:0.18em;text-transform:uppercase;margin-top:10px">${escapeAttr(title)}</div>
               </td>
             </tr>
             <!-- Body -->
             <tr>
-              <td bgcolor="#ffffff" class="dm-white dm-ink" style="background-color:#ffffff;padding:36px;color:${INK};font-family:${SANS};font-size:15px;font-weight:400;line-height:1.7">${bodyHtml}</td>
+              <td bgcolor="${PAPER}" class="dm-white dm-ink" style="background-color:${PAPER};padding:36px;color:${INK};font-family:${SANS};font-size:16px;font-weight:400;line-height:1.75">
+                ${body}
+              </td>
             </tr>
             <!-- Footer -->
             <tr>
-              <td bgcolor="#f6f8fb" class="dm-foot dm-muted" style="background-color:#f6f8fb;border-top:1px solid #e6ebf1;padding:24px 36px;color:${MUTED_C};font-family:${SANS};font-size:12px;line-height:1.7">
+              <td bgcolor="${FOOT}" class="dm-foot dm-muted" style="background-color:${FOOT};border-top:1px solid ${LINE};padding:26px 36px;color:${MUTED};font-family:${SANS};font-size:12px;line-height:1.7">
                 <div>
                   ${anchor(NAVY, 15)}
-                  <span class="dm-brand" style="font-family:${SERIF};font-size:17px;font-weight:600;letter-spacing:0.2em;color:${NAVY};vertical-align:middle;margin-left:8px">AAM</span>
+                  <span class="dm-brand" style="font-family:${SERIF};font-size:16px;font-weight:600;letter-spacing:0.2em;color:${NAVY};vertical-align:middle;margin-left:8px">AAM</span>
                 </div>
-                <div class="dm-ink" style="margin-top:8px;color:${INK}">${BRAND_NAME}</div>
-                <div style="margin-top:1px">${BRAND_LOCATION}</div>
-                <div class="dm-ink" style="margin-top:8px;color:${INK}">Team Mike Schneider</div>
+                <div class="dm-ink" style="margin-top:10px;color:${INK};font-size:13px">${BRAND_NAME}</div>
+                <div style="margin-top:2px">${BRAND_LOCATION}</div>
+                <div class="dm-ink" style="margin-top:10px;color:${INK}">Team Mike Schneider</div>
               </td>
             </tr>
           </table>
