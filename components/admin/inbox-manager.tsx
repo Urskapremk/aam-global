@@ -82,6 +82,44 @@ function fmtDate(d: string | Date) {
   })
 }
 
+type OrderLine = { name: string; quantity: number; lineTotal: number }
+
+function parseOrderMeta(meta: string): Record<string, unknown> | null {
+  if (!meta) return null
+  try {
+    const parsed = JSON.parse(meta)
+    return parsed && typeof parsed === 'object'
+      ? (parsed as Record<string, unknown>)
+      : null
+  } catch {
+    return null
+  }
+}
+
+/** Open orders keep the stamp until an admin marks them completed. */
+function isOrderCompleted(meta: string): boolean {
+  return parseOrderMeta(meta)?.completed === true
+}
+
+function withOrderCompleted(meta: string, completed: boolean): string {
+  const base = parseOrderMeta(meta) ?? {}
+  if (completed) {
+    base.completed = true
+    base.completedAt = new Date().toISOString()
+  } else {
+    delete base.completed
+    delete base.completedAt
+  }
+  return JSON.stringify(base)
+}
+
+function parseOrderLines(meta: string): OrderLine[] | null {
+  const parsed = parseOrderMeta(meta)
+  if (!parsed) return null
+  if (Array.isArray(parsed.lines)) return parsed.lines as OrderLine[]
+  return null
+}
+
 export function InboxManager({
   initial,
   folder,
@@ -904,46 +942,4 @@ function buildForwardBody(m: Message): string {
   return `\n\n---------- Forwarded message ----------\n${who}\nDate: ${fmtDate(
     m.createdAt,
   )}\nSubject: ${m.subject}\n\n${m.body}`
-}
-
-type OrderLine = { name: string; quantity: number; lineTotal: number }
-
-function parseOrderMeta(meta: string): Record<string, unknown> | null {
-  if (!meta) return null
-  try {
-    const parsed = JSON.parse(meta)
-    return parsed && typeof parsed === 'object'
-      ? (parsed as Record<string, unknown>)
-      : null
-  } catch {
-    return null
-  }
-}
-
-/** Open orders keep the stamp until an admin marks them completed. */
-function isOrderCompleted(meta: string): boolean {
-  return parseOrderMeta(meta)?.completed === true
-}
-
-function withOrderCompleted(meta: string, completed: boolean): string {
-  const base = parseOrderMeta(meta) ?? {}
-  if (completed) {
-    base.completed = true
-    base.completedAt = new Date().toISOString()
-  } else {
-    delete base.completed
-    delete base.completedAt
-  }
-  return JSON.stringify(base)
-}
-
-function parseOrderLines(meta: string): OrderLine[] | null {
-  const parsed = parseOrderMeta(meta)
-  if (!parsed) return null
-  try {
-    if (Array.isArray(parsed.lines)) return parsed.lines as OrderLine[]
-    return null
-  } catch {
-    return null
-  }
 }
