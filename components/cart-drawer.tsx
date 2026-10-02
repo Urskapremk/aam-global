@@ -8,7 +8,7 @@ import { saveInboundMessage } from '@/app/actions/messages'
 import { ShopPriceAlt, shopFxText, useShopFx } from '@/components/shop-price'
 
 // AAM WhatsApp order line (digits only, international format)
-const WHATSAPP_NUMBER = '27827777324'
+const WHATSAPP_NUMBER = '261386129869'
 
 export function CartDrawer() {
   const { items, subtotal, count, isOpen, closeCart, setQuantity, removeItem } =

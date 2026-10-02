@@ -14,8 +14,8 @@ const CONTACT_DETAILS = [
   {
     icon: MessageCircle,
     label: 'WhatsApp',
-    value: '+27 82 777 7324',
-    href: 'https://wa.me/27827777324',
+    value: '+261 38 61 298 69',
+    href: 'https://wa.me/261386129869',
   },
   {
     icon: Mail,
