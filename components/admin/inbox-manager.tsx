@@ -324,15 +324,31 @@ export function InboxManager({
               }
               onDragEnd={draggable ? () => setDraggingId(null) : undefined}
               className={cn(
-                'flex w-full flex-col gap-1 rounded-lg border p-3 text-left transition-colors',
+                'relative flex w-full flex-col gap-1 overflow-hidden rounded-lg border p-3 text-left transition-colors',
                 active
                   ? 'border-accent bg-accent/5'
                   : 'border-border hover:border-accent/50',
                 !m.read && m.direction === 'inbound' && 'bg-accent/[0.03]',
+                m.source === 'order' &&
+                  !m.read &&
+                  m.direction === 'inbound' &&
+                  'pr-12',
                 draggable && 'cursor-grab active:cursor-grabbing',
                 draggingId === m.id && 'opacity-50',
               )}
             >
+              {m.source === 'order' &&
+                !m.read &&
+                m.direction === 'inbound' && (
+                  <span
+                    className="pointer-events-none absolute right-0 top-0 bottom-0 flex w-9 items-center justify-center bg-accent text-[9px] font-semibold uppercase tracking-[0.14em] text-accent-foreground"
+                    aria-label={t('New order')}
+                  >
+                    <span className="rotate-90 whitespace-nowrap">
+                      {t('New order')}
+                    </span>
+                  </span>
+                )}
               <div className="flex items-center gap-2">
                 <Icon
                   className="h-3.5 w-3.5 text-muted-foreground"

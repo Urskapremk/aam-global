@@ -330,6 +330,7 @@ export const SL: Record<string, string> = {
   Contact: 'Stik',
   Excursion: 'Izlet',
   Order: 'Naročilo',
+  'New order': 'Novo naročilo',
   'To:': 'Za:',
   'Select a message to view.': 'Izberite sporočilo za ogled.',
   'Back to list': 'Nazaj na seznam',
