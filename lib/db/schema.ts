@@ -160,6 +160,18 @@ export const boatBookings = pgTable('boat_bookings', {
   createdAt: timestamp('createdAt').notNull().defaultNow(),
 })
 
+// First-party public-site page views (geo from Vercel request headers).
+// Powers /admin/analytics — complements @vercel/analytics (Vercel dashboard).
+export const sitePageViews = pgTable('site_page_views', {
+  id: serial('id').primaryKey(),
+  path: text('path').notNull(),
+  country: text('country').notNull().default(''), // ISO 3166-1 alpha-2
+  region: text('region').notNull().default(''),
+  city: text('city').notNull().default(''),
+  referrer: text('referrer').notNull().default(''),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+})
+
 // Inbox: inbound (website forms, replies) + outbound (sent from admin) messages.
 export const messages = pgTable('messages', {
   id: serial('id').primaryKey(),

@@ -1,9 +1,11 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
+import { Suspense } from 'react'
 import { Geist, Cormorant_Garamond } from 'next/font/google'
 import './globals.css'
 import { CartProvider } from '@/components/cart-context'
 import { CartDrawer } from '@/components/cart-drawer'
+import { AnalyticsBeacon } from '@/components/analytics-beacon'
 import { getPublishedProducts } from '@/app/actions/shop-products'
 import { getShopFxRates } from '@/app/actions/shop-fx'
 import { toProduct, PRODUCTS } from '@/lib/products'
@@ -57,6 +59,10 @@ export default async function RootLayout({
           {children}
           <CartDrawer />
         </CartProvider>
+        <Suspense fallback={null}>
+          <AnalyticsBeacon />
+        </Suspense>
+        {/* Vercel Web Analytics dashboard (enable in Vercel → project → Analytics). */}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

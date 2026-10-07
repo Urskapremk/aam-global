@@ -114,6 +114,8 @@ export const NAV: NavNode[] = [
       // Shop products first — the group's landing screen.
       { href: '/admin/products', label: 'Shop products', icon: ShoppingBag },
       { href: '/admin/content', label: 'Texts & images', icon: Type },
+      // Public-site traffic & visitor geography (first-party + Vercel headers).
+      { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
     ],
   },
 ]

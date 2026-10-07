@@ -1,33 +1,25 @@
-# aam-global
+# AAM Global
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
+Next.js site and admin for African Adventures Madagascar (AAM): public website, shop, inbox, fleet ops, and content.
 
-## Built with v0
-
-This repository is linked to a [v0](https://v0.app) project. You can continue developing by visiting the link below -- start new chats to make changes, and v0 will push commits directly to this repo. Every merge to `main` will automatically deploy.
-
-[Continue working on v0 →](https://v0.app/chat/projects/prj_6saw9ljkxs0Apks7y7aVSf0VDOuT)
-
-## Getting Started
-
-First, run the development server:
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
+pnpm install
+cp .env.example .env.local   # if present; otherwise set DATABASE_URL and other secrets
+pnpm exec next dev --port 43127
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://127.0.0.1:43127](http://127.0.0.1:43127). Admin: `/admin` (password from `ADMIN_PASSWORD` / auth setup).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Admin analytics
 
-## Learn More
+- Path: **Web → Analytics** (`/admin/analytics`)
+- First-party page views + visitor country (from Vercel `x-vercel-ip-country` headers on production)
+- Complements **Vercel Web Analytics** (`@vercel/analytics`) — enable in the Vercel project dashboard under **Analytics** for their hosted charts; no extra env var required for the package once enabled
 
-To learn more, take a look at the following resources:
+Local/dev traffic usually has empty country. Geo fills in after deploy to Vercel.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [v0 Documentation](https://v0.app/docs) - learn about v0 and how to use it.
+## Stack
+
+Next.js (App Router), TypeScript, Tailwind, Neon Postgres, better-auth, Resend, Vercel Blob / Analytics.
