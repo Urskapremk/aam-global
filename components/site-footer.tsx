@@ -53,6 +53,14 @@ export function SiteFooter() {
                 </Link>
               </li>
               <li>
+                <Link
+                  href="/blog"
+                  className="text-primary-foreground/80 transition-colors hover:text-primary-foreground"
+                >
+                  Blog
+                </Link>
+              </li>
+              <li>
                 <a
                   href="#contact"
                   className="text-primary-foreground/80 transition-colors hover:text-primary-foreground"

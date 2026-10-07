@@ -7,17 +7,20 @@ import { cn } from '@/lib/utils'
 import { BUSINESSES } from '@/lib/businesses'
 import { useCart } from '@/components/cart-context'
 
-// Shop always comes last in the navigation, after Marine life.
-const NAV_LINKS = [...BUSINESSES]
-  .sort((a, b) => {
-    if (a.slug === 'shop') return 1
-    if (b.slug === 'shop') return -1
-    return 0
-  })
-  .map((b) => ({
-    label: b.name,
-    href: `/${b.slug}`,
-  }))
+// Shop always comes last among ventures; Blog sits after the business links.
+const NAV_LINKS = [
+  ...[...BUSINESSES]
+    .sort((a, b) => {
+      if (a.slug === 'shop') return 1
+      if (b.slug === 'shop') return -1
+      return 0
+    })
+    .map((b) => ({
+      label: b.name,
+      href: `/${b.slug}`,
+    })),
+  { label: 'Blog', href: '/blog' },
+]
 
 export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false)
