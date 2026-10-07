@@ -34,10 +34,12 @@ export function ensureSitePageViewsTable() {
   return tableReady
 }
 
-export type AnalyticsRange = '7d' | '30d' | '90d'
+export type AnalyticsRange = '7d' | '30d' | '90d' | '365d' | 'all'
 
-export function rangeToSince(range: AnalyticsRange): Date {
-  const days = range === '7d' ? 7 : range === '90d' ? 90 : 30
+export function rangeToSince(range: AnalyticsRange): Date | null {
+  if (range === 'all') return null
+  const days =
+    range === '7d' ? 7 : range === '90d' ? 90 : range === '365d' ? 365 : 30
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000)
 }
 
@@ -57,10 +59,29 @@ export type AnalyticsSummary = {
   range: AnalyticsRange
   pageViews: number
   uniqueCountries: number
+  /** All countries with views (for map + lists). */
   topCountries: { country: string; views: number }[]
   topPages: { path: string; views: number }[]
   topReferrers: { referrer: string; views: number }[]
   byDay: { day: string; views: number }[]
+  /** Oldest recorded view in this range (ISO), if any. */
+  firstSeen: string | null
+  lastSeen: string | null
+}
+
+export type PageViewRow = {
+  id: number
+  path: string
+  country: string
+  region: string
+  city: string
+  referrer: string
+  createdAt: string
+}
+
+function sinceClause(since: Date | null): { sql: string; params: unknown[] } {
+  if (!since) return { sql: '', params: [] }
+  return { sql: `WHERE "createdAt" >= $1`, params: [since] }
 }
 
 export async function querySiteAnalytics(
@@ -68,32 +89,32 @@ export async function querySiteAnalytics(
 ): Promise<AnalyticsSummary> {
   await ensureSitePageViewsTable()
   const since = rangeToSince(range)
+  const { sql: where, params } = sinceClause(since)
 
-  const [totals, countries, pages, referrers, days] = await Promise.all([
+  const [totals, countries, pages, referrers, days, span] = await Promise.all([
     pool.query<{ page_views: string; countries: string }>(
       `SELECT COUNT(*)::text AS page_views,
               COUNT(DISTINCT NULLIF(country, ''))::text AS countries
          FROM site_page_views
-        WHERE "createdAt" >= $1`,
-      [since],
+         ${where}`,
+      params,
     ),
     pool.query<{ country: string; views: string }>(
       `SELECT COALESCE(NULLIF(country, ''), '') AS country, COUNT(*)::text AS views
          FROM site_page_views
-        WHERE "createdAt" >= $1
+         ${where}
         GROUP BY 1
-        ORDER BY COUNT(*) DESC
-        LIMIT 15`,
-      [since],
+        ORDER BY COUNT(*) DESC`,
+      params,
     ),
     pool.query<{ path: string; views: string }>(
       `SELECT path, COUNT(*)::text AS views
          FROM site_page_views
-        WHERE "createdAt" >= $1
+         ${where}
         GROUP BY path
         ORDER BY COUNT(*) DESC
-        LIMIT 15`,
-      [since],
+        LIMIT 25`,
+      params,
     ),
     pool.query<{ referrer: string; views: string }>(
       `SELECT CASE
@@ -102,20 +123,26 @@ export async function querySiteAnalytics(
               END AS referrer,
               COUNT(*)::text AS views
          FROM site_page_views
-        WHERE "createdAt" >= $1
+         ${where}
         GROUP BY 1
         ORDER BY COUNT(*) DESC
-        LIMIT 10`,
-      [since],
+        LIMIT 15`,
+      params,
     ),
     pool.query<{ day: string; views: string }>(
       `SELECT to_char(date_trunc('day', "createdAt"), 'YYYY-MM-DD') AS day,
               COUNT(*)::text AS views
          FROM site_page_views
-        WHERE "createdAt" >= $1
+         ${where}
         GROUP BY 1
         ORDER BY 1 ASC`,
-      [since],
+      params,
+    ),
+    pool.query<{ first_seen: Date | null; last_seen: Date | null }>(
+      `SELECT MIN("createdAt") AS first_seen, MAX("createdAt") AS last_seen
+         FROM site_page_views
+         ${where}`,
+      params,
     ),
   ])
 
@@ -138,6 +165,69 @@ export async function querySiteAnalytics(
     byDay: days.rows.map((r) => ({
       day: r.day,
       views: Number(r.views),
+    })),
+    firstSeen: span.rows[0]?.first_seen
+      ? new Date(span.rows[0].first_seen).toISOString()
+      : null,
+    lastSeen: span.rows[0]?.last_seen
+      ? new Date(span.rows[0].last_seen).toISOString()
+      : null,
+  }
+}
+
+export async function queryPageViewHistory(
+  range: AnalyticsRange,
+  opts: { limit?: number; offset?: number } = {},
+): Promise<{ rows: PageViewRow[]; total: number }> {
+  await ensureSitePageViewsTable()
+  const since = rangeToSince(range)
+  const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200)
+  const offset = Math.max(opts.offset ?? 0, 0)
+
+  const params: unknown[] = []
+  let where = ''
+  if (since) {
+    params.push(since)
+    where = `WHERE "createdAt" >= $${params.length}`
+  }
+  params.push(limit)
+  const limitIdx = params.length
+  params.push(offset)
+  const offsetIdx = params.length
+
+  const [list, count] = await Promise.all([
+    pool.query<{
+      id: number
+      path: string
+      country: string
+      region: string
+      city: string
+      referrer: string
+      createdAt: Date
+    }>(
+      `SELECT id, path, country, region, city, referrer, "createdAt"
+         FROM site_page_views
+         ${where}
+        ORDER BY "createdAt" DESC, id DESC
+        LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+      params,
+    ),
+    pool.query<{ total: string }>(
+      `SELECT COUNT(*)::text AS total FROM site_page_views ${where}`,
+      since ? [since] : [],
+    ),
+  ])
+
+  return {
+    total: Number(count.rows[0]?.total ?? 0),
+    rows: list.rows.map((r) => ({
+      id: r.id,
+      path: r.path,
+      country: r.country,
+      region: r.region,
+      city: r.city,
+      referrer: r.referrer,
+      createdAt: new Date(r.createdAt).toISOString(),
     })),
   }
 }

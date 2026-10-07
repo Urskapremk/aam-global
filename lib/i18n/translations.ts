@@ -251,15 +251,26 @@ export const SL: Record<string, string> = {
   Analytics: 'Analitika',
   'Where people view the public site from, plus page views and top pages.':
     'Od kod obiskovalci gledajo javno stran, ogledi strani in najbolj obiskane strani.',
+  'Where people view the public site from — interactive map, trends, and full view history.':
+    'Od kod obiskovalci gledajo javno stran — interaktivni zemljevid, trendi in celotna zgodovina ogledov.',
   'Last 7 days': 'Zadnjih 7 dni',
   'Last 30 days': 'Zadnjih 30 dni',
   'Last 90 days': 'Zadnjih 90 dni',
+  'Last 12 months': 'Zadnjih 12 mesecev',
+  'All time': 'Vse obdobje',
   'Page views': 'Ogledi strani',
   Countries: 'Države',
   'Top country': 'Najpogostejša država',
+  'Visitor map': 'Zemljevid obiskovalcev',
+  'Hover a country to see page views. Colour intensity = traffic.':
+    'Preidi z miško čez državo za oglede. Jakost barve = promet.',
+  'Recorded from': 'Zabeleženo od',
+  Latest: 'Zadnje',
   'No traffic recorded yet': 'Še ni zabeleženega prometa',
   'Views are collected when visitors open public pages on the live site (Vercel). Local/dev visits usually have no country.':
     'Ogledi se zbirajo, ko obiskovalci odprejo javne strani na produkciji (Vercel). Lokalni/razvojni obiski običajno nimajo države.',
+  'Views are collected when visitors open public pages on the live site (Vercel). Local/dev visits usually have no country. History starts when tracking was enabled — earlier visits are not available unless they were already stored.':
+    'Ogledi se zbirajo, ko obiskovalci odprejo javne strani na produkciji (Vercel). Lokalni/razvojni obiski običajno nimajo države. Zgodovina se začne, ko je bilo sledenje vklopljeno — starejših obiskov ni, razen če so že shranjeni.',
   'Also see Vercel Web Analytics': 'Glej tudi Vercel Web Analytics',
   'Daily page views': 'Dnevni ogledi strani',
   'Where visitors view from': 'Od kod gledajo obiskovalci',
@@ -267,6 +278,16 @@ export const SL: Record<string, string> = {
   'Top pages': 'Najbolj obiskane strani',
   'No pages yet': 'Še ni strani',
   'Top referrers': 'Najpogostejši viri',
+  'View history': 'Zgodovina ogledov',
+  'Every recorded page view in this period (newest first).':
+    'Vsak zabeležen ogled v tem obdobju (najnovejši najprej).',
+  total: 'skupaj',
+  'No views yet': 'Še ni ogledov',
+  When: 'Kdaj',
+  Page: 'Stran',
+  Country: 'Država',
+  City: 'Mesto',
+  'Load more': 'Naloži več',
   'View site': 'Ogled strani',
   'Sign out': 'Odjava',
   Language: 'Jezik',

@@ -1,13 +1,45 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState, useTransition } from 'react'
-import { Globe2, Eye, MapPinned, ExternalLink } from 'lucide-react'
-import { getSiteAnalytics } from '@/app/actions/site-analytics'
+import { Globe2, Eye, MapPinned, ExternalLink, History } from 'lucide-react'
+import {
+  getPageViewHistory,
+  getSiteAnalytics,
+} from '@/app/actions/site-analytics'
 import { useLang, useT } from '@/lib/i18n/context'
 import { cn } from '@/lib/utils'
-import type { AnalyticsRange, AnalyticsSummary } from '@/lib/site-analytics'
+import type {
+  AnalyticsRange,
+  AnalyticsSummary,
+  PageViewRow,
+} from '@/lib/site-analytics'
 
-const RANGES: AnalyticsRange[] = ['7d', '30d', '90d']
+const VisitorWorldMap = dynamic(() => import('./visitor-world-map'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-[min(420px,55vh)] items-center justify-center rounded-xl border border-dashed border-border bg-card text-sm text-muted-foreground">
+      …
+    </div>
+  ),
+})
+
+const RANGES: AnalyticsRange[] = ['7d', '30d', '90d', '365d', 'all']
+
+function rangeLabel(r: AnalyticsRange): string {
+  switch (r) {
+    case '7d':
+      return 'Last 7 days'
+    case '30d':
+      return 'Last 30 days'
+    case '90d':
+      return 'Last 90 days'
+    case '365d':
+      return 'Last 12 months'
+    case 'all':
+      return 'All time'
+  }
+}
 
 function countryName(code: string, lang: 'en' | 'sl'): string {
   if (!code) return lang === 'sl' ? 'Neznano / lokalno' : 'Unknown / local'
@@ -22,28 +54,50 @@ function countryName(code: string, lang: 'en' | 'sl'): string {
   }
 }
 
+function formatWhen(iso: string, lang: 'en' | 'sl'): string {
+  try {
+    return new Date(iso).toLocaleString(lang === 'sl' ? 'sl-SI' : 'en-GB', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    })
+  } catch {
+    return iso
+  }
+}
+
 export function SiteAnalyticsPanel({
   initial,
+  initialHistory,
 }: {
   initial: AnalyticsSummary
+  initialHistory: { rows: PageViewRow[]; total: number }
 }) {
   const t = useT()
   const lang = useLang()
   const [range, setRange] = useState<AnalyticsRange>(initial.range)
   const [data, setData] = useState(initial)
+  const [history, setHistory] = useState(initialHistory)
   const [pending, startTransition] = useTransition()
 
   useEffect(() => {
     if (range === data.range) return
     startTransition(async () => {
-      const next = await getSiteAnalytics(range)
+      const [next, hist] = await Promise.all([
+        getSiteAnalytics(range),
+        getPageViewHistory(range, 0),
+      ])
       if (next) setData(next)
+      if (hist) setHistory(hist)
     })
   }, [range, data.range])
 
-  const maxCountry = useMemo(
-    () => Math.max(1, ...data.topCountries.map((c) => c.views)),
+  const listCountries = useMemo(
+    () => data.topCountries.filter((c) => c.country).slice(0, 15),
     [data.topCountries],
+  )
+  const maxCountry = useMemo(
+    () => Math.max(1, ...listCountries.map((c) => c.views)),
+    [listCountries],
   )
   const maxPage = useMemo(
     () => Math.max(1, ...data.topPages.map((p) => p.views)),
@@ -53,6 +107,17 @@ export function SiteAnalyticsPanel({
     () => Math.max(1, ...data.byDay.map((d) => d.views)),
     [data.byDay],
   )
+
+  function loadMoreHistory() {
+    startTransition(async () => {
+      const next = await getPageViewHistory(range, history.rows.length)
+      if (!next) return
+      setHistory({
+        total: next.total,
+        rows: [...history.rows, ...next.rows],
+      })
+    })
+  }
 
   return (
     <div className={cn('space-y-6', pending && 'opacity-70')}>
@@ -69,10 +134,20 @@ export function SiteAnalyticsPanel({
                 : 'border-border text-muted-foreground hover:text-foreground',
             )}
           >
-            {t(r === '7d' ? 'Last 7 days' : r === '30d' ? 'Last 30 days' : 'Last 90 days')}
+            {t(rangeLabel(r))}
           </button>
         ))}
       </div>
+
+      {(data.firstSeen || data.lastSeen) && (
+        <p className="text-xs text-muted-foreground">
+          {t('Recorded from')}{' '}
+          {data.firstSeen ? formatWhen(data.firstSeen, lang) : '—'}
+          {' · '}
+          {t('Latest')}{' '}
+          {data.lastSeen ? formatWhen(data.lastSeen, lang) : '—'}
+        </p>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
@@ -89,19 +164,37 @@ export function SiteAnalyticsPanel({
           icon={MapPinned}
           label={t('Top country')}
           value={
-            data.topCountries[0]
-              ? countryName(data.topCountries[0].country, lang)
+            listCountries[0]
+              ? countryName(listCountries[0].country, lang)
               : '—'
           }
         />
       </div>
+
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="font-serif text-xl text-foreground">
+              {t('Visitor map')}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t('Hover a country to see page views. Colour intensity = traffic.')}
+            </p>
+          </div>
+        </div>
+        <VisitorWorldMap
+          countries={data.topCountries}
+          lang={lang}
+          labelViews={t('Page views')}
+        />
+      </section>
 
       {data.pageViews === 0 && (
         <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-sm text-muted-foreground">
           <p className="font-medium text-foreground">{t('No traffic recorded yet')}</p>
           <p className="mt-2">
             {t(
-              'Views are collected when visitors open public pages on the live site (Vercel). Local/dev visits usually have no country.',
+              'Views are collected when visitors open public pages on the live site (Vercel). Local/dev visits usually have no country. History starts when tracking was enabled — earlier visits are not available unless they were already stored.',
             )}
           </p>
           <p className="mt-3">
@@ -146,7 +239,7 @@ export function SiteAnalyticsPanel({
         <RankList
           title={t('Where visitors view from')}
           empty={t('No country data yet')}
-          rows={data.topCountries.map((c) => ({
+          rows={listCountries.map((c) => ({
             key: c.country || 'local',
             label: countryName(c.country, lang),
             sub: c.country ? c.country.toUpperCase() : undefined,
@@ -186,6 +279,67 @@ export function SiteAnalyticsPanel({
           </ul>
         </section>
       )}
+
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <div className="flex items-center gap-2">
+          <History className="h-4 w-4 text-accent" strokeWidth={1.5} />
+          <h2 className="font-serif text-xl text-foreground">
+            {t('View history')}
+          </h2>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {t('Every recorded page view in this period (newest first).')}{' '}
+          {history.total.toLocaleString(lang === 'sl' ? 'sl-SI' : 'en-GB')}{' '}
+          {t('total')}
+        </p>
+        {history.rows.length === 0 ? (
+          <p className="mt-4 text-sm text-muted-foreground">{t('No views yet')}</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left text-sm">
+              <thead className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="pb-2 pr-3 font-medium">{t('When')}</th>
+                  <th className="pb-2 pr-3 font-medium">{t('Page')}</th>
+                  <th className="pb-2 pr-3 font-medium">{t('Country')}</th>
+                  <th className="pb-2 font-medium">{t('City')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {history.rows.map((row) => (
+                  <tr key={row.id}>
+                    <td className="py-2.5 pr-3 whitespace-nowrap text-muted-foreground">
+                      {formatWhen(row.createdAt, lang)}
+                    </td>
+                    <td className="max-w-[200px] truncate py-2.5 pr-3 font-medium text-foreground">
+                      {row.path}
+                    </td>
+                    <td className="py-2.5 pr-3 text-foreground">
+                      {countryName(row.country, lang)}
+                      {row.region ? (
+                        <span className="text-muted-foreground"> · {row.region}</span>
+                      ) : null}
+                    </td>
+                    <td className="py-2.5 text-muted-foreground">
+                      {row.city || '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {history.rows.length < history.total && (
+          <button
+            type="button"
+            onClick={loadMoreHistory}
+            disabled={pending}
+            className="mt-4 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-secondary disabled:opacity-60"
+          >
+            {t('Load more')}
+          </button>
+        )}
+      </section>
     </div>
   )
 }

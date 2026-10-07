@@ -1,12 +1,18 @@
 import { SiteAnalyticsPanel } from '@/components/admin/site-analytics-panel'
-import { querySiteAnalytics } from '@/lib/site-analytics'
+import {
+  queryPageViewHistory,
+  querySiteAnalytics,
+} from '@/lib/site-analytics'
 import { getLang } from '@/lib/i18n/server'
 import { translate } from '@/lib/i18n/translations'
 
 export default async function AdminAnalyticsPage() {
   const lang = await getLang()
   const t = (s: string) => translate(lang, s)
-  const initial = await querySiteAnalytics('30d')
+  const [initial, initialHistory] = await Promise.all([
+    querySiteAnalytics('all'),
+    queryPageViewHistory('all', { limit: 50, offset: 0 }),
+  ])
 
   return (
     <div className="space-y-6">
@@ -21,13 +27,13 @@ export default async function AdminAnalyticsPage() {
           </h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
             {t(
-              'Where people view the public site from, plus page views and top pages.',
+              'Where people view the public site from — interactive map, trends, and full view history.',
             )}
           </p>
         </div>
       </div>
 
-      <SiteAnalyticsPanel initial={initial} />
+      <SiteAnalyticsPanel initial={initial} initialHistory={initialHistory} />
     </div>
   )
 }
