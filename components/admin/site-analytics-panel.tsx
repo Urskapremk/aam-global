@@ -1,6 +1,5 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { Globe2, Eye, MapPinned, ExternalLink, History } from 'lucide-react'
 import {
@@ -14,15 +13,7 @@ import type {
   AnalyticsSummary,
   PageViewRow,
 } from '@/lib/site-analytics'
-
-const VisitorWorldMap = dynamic(() => import('./visitor-world-map'), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-[min(420px,55vh)] items-center justify-center rounded-xl border border-dashed border-border bg-card text-sm text-muted-foreground">
-      …
-    </div>
-  ),
-})
+import VisitorWorldMap from './visitor-world-map'
 
 const RANGES: AnalyticsRange[] = ['7d', '30d', '90d', '365d', 'all']
 
