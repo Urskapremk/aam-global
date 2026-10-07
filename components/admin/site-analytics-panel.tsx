@@ -7,7 +7,7 @@ import {
   getPageViewHistory,
   getSiteAnalytics,
 } from '@/app/actions/site-analytics'
-import { useLang, useT } from '@/lib/i18n/context'
+import { useLang } from '@/lib/i18n/context'
 import { cn } from '@/lib/utils'
 import type {
   AnalyticsRange,
@@ -72,8 +72,7 @@ export function SiteAnalyticsPanel({
   initial: AnalyticsSummary
   initialHistory: { rows: PageViewRow[]; total: number }
 }) {
-  const t = useT()
-  const lang = useLang()
+  const { t, lang } = useLang()
   const [range, setRange] = useState<AnalyticsRange>(initial.range)
   const [data, setData] = useState(initial)
   const [history, setHistory] = useState(initialHistory)

@@ -93,7 +93,7 @@ export default function VisitorWorldMap({ countries, lang, labelViews }: Props) 
           }[]
         }) => {
           if (cancelled || !mapRef.current) return
-          const layer = L.geoJSON(geo as GeoJSON.GeoJsonObject, {
+          const layer = L.geoJSON(geo as unknown as GeoJSON.GeoJsonObject, {
             style: (feature) => {
               const iso = (
                 feature?.properties as { iso?: string } | undefined

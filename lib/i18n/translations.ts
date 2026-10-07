@@ -283,9 +283,8 @@ export const SL: Record<string, string> = {
     'Vsak zabeležen ogled v tem obdobju (najnovejši najprej).',
   total: 'skupaj',
   'No views yet': 'Še ni ogledov',
-  When: 'Kdaj',
+  // When / Country already translated elsewhere in this file.
   Page: 'Stran',
-  Country: 'Država',
   City: 'Mesto',
   'Load more': 'Naloži več',
   'View site': 'Ogled strani',
