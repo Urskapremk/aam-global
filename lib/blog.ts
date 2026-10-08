@@ -26,9 +26,9 @@ export const POSTS: BlogPost[] = [
       'Out past the reefs at first light, heavy tackle set and current lines waiting — how AAM runs a blue-water day for tuna, marlin, and dorado off Madagascar’s northwest coast.',
     date: '2026-10-07',
     author: 'AAM Fishing',
-    heroImage: '/images/fishing-biggame-sunset.png',
+    heroImage: '/blog/odyssey-sunset.jpg',
     heroAlt:
-      'Big-game trolling rods with gold reels racked on the stern of a boat at sunset, a glowing sun low over calm open water off Nosy Komba',
+      'Odyssey sportfishing boat at sunset off Nosy Komba with rods in holders',
     tags: ['Fishing', 'Nosy Komba', 'Big game'],
     body: [
       'Big-game fishing from Nosy Komba is not a half-hour hop to a buoy. It is an early departure, a run into blue water, and a day shaped by wind, current, and what the ocean is actually doing — not a brochure schedule.',
