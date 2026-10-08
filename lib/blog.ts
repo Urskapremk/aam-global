@@ -20,6 +20,26 @@ export type BlogPost = {
 
 export const POSTS: BlogPost[] = [
   {
+    slug: 'marlin-trophy-fish',
+    title: 'Marlin: the trophy fish everyone really wants',
+    excerpt:
+      'Blue water, heavy gear, and one fish that still stops the deck cold — why marlin is the dream catch for big-game anglers running out of Nosy Komba with AAM.',
+    date: '2026-10-08',
+    author: 'AAM Fishing',
+    heroImage: '/blog/marlin-biggame-sunset.png',
+    heroAlt:
+      'Gold big-game reels and trolling rods on the boat rail at sunset, ready for offshore marlin fishing off Nosy Komba',
+    tags: ['Marlin', 'Big game', 'Nosy Komba'],
+    body: [
+      'Ask a serious angler what they came to Madagascar for, and plenty will say tuna or dorado without blinking. Ask what they really want — the fish that makes the whole trip feel earned — and the answer is almost always marlin.',
+      'Out of Nosy Komba, marlin is not a guarantee and never a prop for photos. It is a blue-water pursuit: early steam offshore, spreads set in clean colour, and hours of reading current lines, bird activity, and temperature breaks while the crew keeps the gear honest. When the season and the water line up, that long billfish strike is the moment the day was built for.',
+      'AAM Fishing and AAM Charters run the same coastal group from the island. Guests step onto a crewed sport boat with stout trolling rods, two-speed reels, and leaders ready for a fish that can empty a spool in seconds. The deck stays clear. Someone watches the outriggers. Someone is already thinking about the chair, the harness, and how the boat will turn when the line comes tight.',
+      'Northwest Madagascar’s offshore grounds hold striped and other billfish within reach when conditions favour a longer run. Some days the bite shows itself early; some days you search under a hard sun with nothing but wake and patience. That is part of the pull. Marlin fishing rewards people who treat the ocean as it is — not as a checklist of named waypoints.',
+      'When a marlin does come up, the fight is physical and loud. The angler works the rod; the crew manages the leader, the boat angle, and the release or boatside work. We fish for the fight first. Where tags, careful release, or a fish for the table make sense under local rules and the skipper’s call, we do it cleanly and without theatre.',
+      'If you are planning Nosy Komba or a nearby resort stay and the fish in your head is the one with the bill and the jump, ask for a dedicated big-game day aimed at marlin. We will match boat, tide window, and season so your hours go where trophy fish actually run — not where a brochure says they should.',
+    ],
+  },
+  {
     slug: 'big-game-fishing-nosy-komba',
     title: 'Big-game fishing from Nosy Komba',
     excerpt:
