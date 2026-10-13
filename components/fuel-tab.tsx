@@ -13,6 +13,7 @@ import {
   Gauge,
   ImageIcon,
   Loader2,
+  Pencil,
   Receipt,
   RotateCcw,
   Ship,
@@ -50,6 +51,7 @@ import {
   restoreFuelEntry,
   restoreFuelProcurement,
   setFuelReorderLevel,
+  updateFuelPurchase,
   type BoatFuelReading,
   type BoatFuelSummary,
   type FuelEntry,
@@ -1902,23 +1904,45 @@ function ProcurementSection() {
   )
 }
 
+// Madagascar UTC+3 — same convention as the fuel actions.
+const LODGE_OFFSET_MS_UI = 3 * 60 * 60 * 1000
+// YYYY-MM-DD for <input type="date"> from an ISO timestamp (lodge-local day).
+function toDateInputValue(iso: string) {
+  const d = new Date(new Date(iso).getTime() + LODGE_OFFSET_MS_UI)
+  return d.toISOString().slice(0, 10)
+}
+
 function PurchaseForm({
   fx,
+  initial,
   onDone,
   onCancel,
 }: {
   fx: FxRates | undefined
+  initial?: FuelProcurement
   onDone: () => void
   onCancel: () => void
 }) {
   const { t, lang } = useLang()
-  const [litresVal, setLitresVal] = useState('')
-  const [priceVal, setPriceVal] = useState('')
-  const [payMethod, setPayMethod] = useState<PaymentMethod | ''>('')
-  const [station, setStation] = useState('')
-  const [paidBy, setPaidBy] = useState('')
-  const [note, setNote] = useState('')
-  const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
+  const editing = !!initial
+  const [litresVal, setLitresVal] = useState(
+    initial?.paidLitres != null ? String(initial.paidLitres) : '',
+  )
+  const [priceVal, setPriceVal] = useState(
+    initial?.pricePerLitreAr != null ? String(initial.pricePerLitreAr) : '',
+  )
+  const [payMethod, setPayMethod] = useState<PaymentMethod | ''>(
+    initial?.paymentMethod ?? '',
+  )
+  const [station, setStation] = useState(initial?.station ?? '')
+  const [paidBy, setPaidBy] = useState(initial?.paidBy ?? '')
+  const [note, setNote] = useState(initial?.note ?? '')
+  const [paidDate, setPaidDate] = useState(
+    initial ? toDateInputValue(initial.paidAt) : '',
+  )
+  const [receiptUrl, setReceiptUrl] = useState<string | null>(
+    initial?.receiptUrl ?? null,
+  )
   const [uploading, setUploading] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -1954,15 +1978,21 @@ function PurchaseForm({
     setBusy(true)
     setErr(null)
     try {
-      await logFuelPurchase({
+      const payload = {
         paidLitres: litresVal === '' ? null : Number(litresVal),
         pricePerLitreAr: priceVal === '' ? null : Number(priceVal),
-        paymentMethod: payMethod || null,
+        paymentMethod: (payMethod || null) as PaymentMethod | null,
         receiptUrl,
         station,
         paidBy,
         note,
-      })
+        paidAt: paidDate || undefined,
+      }
+      if (editing && initial) {
+        await updateFuelPurchase({ id: initial.id, ...payload })
+      } else {
+        await logFuelPurchase(payload)
+      }
       onDone()
     } catch (e) {
       setErr(e instanceof Error ? e.message : t('Could not save'))
@@ -1975,7 +2005,7 @@ function PurchaseForm({
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-2 text-sm font-medium text-foreground">
           <Receipt className="h-4 w-4 text-accent" aria-hidden />
-          {t('Station payment')}
+          {editing ? t('Edit payment') : t('Station payment')}
         </p>
         <button
           type="button"
@@ -2030,7 +2060,18 @@ function PurchaseForm({
             className={`mt-1.5 ${inputCls}`}
           />
         </div>
-        <div className="sm:col-span-2">
+        {editing && (
+          <div>
+            <label className={labelCls}>{t('Payment date')}</label>
+            <input
+              type="date"
+              value={paidDate}
+              onChange={(e) => setPaidDate(e.target.value)}
+              className={`mt-1.5 ${inputCls}`}
+            />
+          </div>
+        )}
+        <div className={editing ? '' : 'sm:col-span-2'}>
           <label className={labelCls}>{t('Note (optional)')}</label>
           <input
             type="text"
@@ -2152,9 +2193,13 @@ function PurchaseForm({
         </div>
       </div>
 
-      <p className="mt-3 text-[10px] text-muted-foreground">
-        {t('This records the payment only — the fuel is added to the warehouse when it is received.')}
-      </p>
+      {!editing && (
+        <p className="mt-3 text-[10px] text-muted-foreground">
+          {t(
+            'This records the payment only — the fuel is added to the warehouse when it is received.',
+          )}
+        </p>
+      )}
 
       {err && (
         <p className="mt-2 text-[11px]" style={{ color: DUE_TONE.overdue.fg }}>
@@ -2173,7 +2218,7 @@ function PurchaseForm({
         ) : (
           <Check className="h-3.5 w-3.5" aria-hidden />
         )}
-        {t('Save payment')}
+        {editing ? t('Save') : t('Save payment')}
       </button>
     </div>
   )
@@ -2190,11 +2235,24 @@ function OpenProcurementCard({
 }) {
   const { t, lang } = useLang()
   const [receiving, setReceiving] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function remove() {
+    if (!confirm(t('Move this purchase to the archive?'))) return
+    setDeleting(true)
+    try {
+      await deleteFuelProcurement(proc.id)
+      onChanged()
+    } catch {
+      setDeleting(false)
+    }
+  }
 
   return (
     <div className="rounded-xl border border-border bg-secondary/20 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-foreground">
             <Receipt className="h-4 w-4 text-accent" aria-hidden />
             {proc.paidLitres != null
@@ -2226,7 +2284,7 @@ function OpenProcurementCard({
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-shrink-0 items-center gap-1">
           {proc.receiptUrl && (
             <a
               href={proc.receiptUrl}
@@ -2251,18 +2309,63 @@ function OpenProcurementCard({
           >
             {t('Awaiting pickup')}
           </span>
+          {!editing && !receiving && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setReceiving(false)
+                  setEditing(true)
+                }}
+                aria-label={t('Edit')}
+                className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              >
+                <Pencil className="h-4 w-4" aria-hidden />
+              </button>
+              <button
+                type="button"
+                onClick={remove}
+                disabled={deleting}
+                aria-label={t('Delete entry')}
+                className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-[#b0203a] disabled:opacity-50"
+              >
+                {deleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <Trash2 className="h-4 w-4" aria-hidden />
+                )}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      {!receiving && (
+      {!receiving && !editing && (
         <button
           type="button"
-          onClick={() => setReceiving(true)}
+          onClick={() => {
+            setEditing(false)
+            setReceiving(true)
+          }}
           className="mt-3 flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full border border-accent bg-accent/15 px-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-accent"
         >
           <Truck className="h-3.5 w-3.5" aria-hidden />
           {t('Confirm pickup')}
         </button>
+      )}
+
+      {editing && (
+        <div className="mt-3">
+          <PurchaseForm
+            fx={fx}
+            initial={proc}
+            onDone={() => {
+              setEditing(false)
+              onChanged()
+            }}
+            onCancel={() => setEditing(false)}
+          />
+        </div>
       )}
 
       {receiving && (

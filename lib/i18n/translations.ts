@@ -556,6 +556,10 @@ export const SL: Record<string, string> = {
   'This records the payment only — the fuel is added to the warehouse when it is received.':
     'To zabeleži samo plačilo — gorivo se doda v skladišče ob prevzemu.',
   'Save payment': 'Shrani plačilo',
+  'Edit payment': 'Uredi plačilo',
+  'Payment date': 'Datum plačila',
+  'Move this purchase to the archive?':
+    'Premaknem to nabavo v arhiv?',
   'Confirm pickup': 'Potrdi prevzem',
   'Receive into the warehouse': 'Prevzem v skladišče',
   '20 L cans': '20 L kante',

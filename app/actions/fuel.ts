@@ -974,6 +974,66 @@ export async function logFuelPurchase(input: {
   revalidatePath('/admin')
 }
 
+// Edit a paid (awaiting pickup) purchase — same fields as logFuelPurchase.
+// Received rows stay immutable here; cancel via archive if needed.
+export async function updateFuelPurchase(input: {
+  id: string
+  paidLitres?: number | null
+  pricePerLitreAr?: number | null
+  station?: string | null
+  note?: string | null
+  paidBy?: string | null
+  paymentMethod?: PaymentMethod | null
+  receiptUrl?: string | null
+  paidAt?: string
+}): Promise<void> {
+  await assertAdmin()
+  const [existing] = await db
+    .select()
+    .from(fuelProcurements)
+    .where(eq(fuelProcurements.id, input.id))
+    .limit(1)
+  if (!existing) throw new Error('Purchase not found')
+  if (existing.archivedAt) throw new Error('Purchase is archived')
+  if (existing.status === 'received') {
+    throw new Error('Received purchases cannot be edited')
+  }
+
+  const paidLitres =
+    input.paidLitres != null && Number(input.paidLitres) > 0
+      ? Math.abs(Number(input.paidLitres))
+      : null
+  const pricePerLitreAr =
+    input.pricePerLitreAr != null && Number(input.pricePerLitreAr) >= 0
+      ? Math.abs(Number(input.pricePerLitreAr))
+      : null
+  const fuelCostAr =
+    paidLitres != null && pricePerLitreAr != null
+      ? Math.round(paidLitres * pricePerLitreAr)
+      : null
+  if (paidLitres == null && pricePerLitreAr == null) {
+    throw new Error('Enter the litres paid for and the price per litre')
+  }
+  const pm = input.paymentMethod
+  await db
+    .update(fuelProcurements)
+    .set({
+      paidLitres,
+      pricePerLitreAr,
+      fuelCostAr,
+      paymentMethod:
+        pm === 'cash' || pm === 'orange_money' || pm === 'card' ? pm : null,
+      receiptUrl: input.receiptUrl?.trim() || null,
+      station: input.station?.trim() || null,
+      note: input.note?.trim() || null,
+      paidBy: input.paidBy?.trim() || null,
+      paidAt: parseOccurredAt(input.paidAt),
+    })
+    .where(eq(fuelProcurements.id, input.id))
+  revalidatePath('/admin/fuel')
+  revalidatePath('/admin')
+}
+
 // Step 2: the fuel arrives in cans. This is the moment it enters the warehouse.
 export async function receiveFuelPurchase(input: {
   id: string
