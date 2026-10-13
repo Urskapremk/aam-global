@@ -95,10 +95,11 @@ const ariary = (n: number, lang: string) =>
 // Informational EUR + ZAR alongside an Ariary amount, e.g. "≈ 188 € · ≈ 3.600 R".
 // Returns null when the amount or rates are missing so callers can skip it.
 const fxHint = (ar: number | null, fx: FxRates | undefined, lang: string) => {
-  if (ar == null || !fx) return null
+  if (ar == null || !fx || !fx.arPerEur || !fx.arPerZar) return null
   const eur = Math.round(ar / fx.arPerEur)
   const zar = Math.round(ar / fx.arPerZar)
   const loc = numLocale(lang)
+  // Match lib/currency + rest of admin: Ar base, € and R as reference.
   return `≈ ${eur.toLocaleString(loc)} € · ≈ ${zar.toLocaleString(loc)} R`
 }
 
@@ -162,6 +163,11 @@ export function FuelTab() {
   const data = useSWR('fuel', () => getFuelState(), {
     refreshInterval: 120000,
     revalidateOnFocus: true,
+  })
+  // Live EUR/ZAR reference for the Fuel spend card (shared 'fx-rates' key).
+  const { data: fx } = useSWR('fx-rates', () => getFxRates(), {
+    refreshInterval: 60 * 60 * 12 * 1000,
+    revalidateOnFocus: false,
   })
   const [mode, setMode] = useState<Mode>(null)
 
@@ -275,11 +281,11 @@ export function FuelTab() {
                   value={
                     d.thisMonth.spendAr > 0
                       ? ariary(d.thisMonth.spendAr, lang)
-                      : '����'
+                      : '—'
                   }
                   hint={
                     d.thisMonth.spendAr > 0
-                      ? undefined
+                      ? (fxHint(d.thisMonth.spendAr, fx, lang) ?? undefined)
                       : d.thisMonth.deliveries > 0
                         ? t('no cost entered')
                         : undefined
@@ -1246,7 +1252,7 @@ function LedgerRow({
     entry.type === 'refuel'
       ? `−${litres(Math.abs(entry.litres), lang)}`
       : entry.type === 'adjustment'
-        ? `${entry.litres > 0 ? '+' : '���'}${litres(Math.abs(entry.litres), lang)}`
+        ? `${entry.litres > 0 ? '+' : '−'}${litres(Math.abs(entry.litres), lang)}`
         : `+${litres(Math.abs(entry.litres), lang)}`
 
   const tone =
@@ -1375,7 +1381,7 @@ function LedgerRow({
   )
 }
 
-// ── Combined stock: warehouse + every boat �����──────────────────────────────
+// ── Combined stock: warehouse + every boat ──────────────────────────────
 function FuelTotalsPanel() {
   const { t, lang } = useLang()
   const { data: d, isLoading } = useSWR('fuel-totals', () => getFuelTotals(), {
