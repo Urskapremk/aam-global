@@ -14,29 +14,73 @@ export type BlogPost = {
   heroAlt: string
   /** Short tags for the index card */
   tags: string[]
-  /** Article body as paragraphs (plain text; first is lead) */
+  /**
+   * Article body (first entry is the lead). Conventions on the post page:
+   * - plain strings → paragraphs
+   * - "## Heading" → section titles
+   * - "- item" (consecutive) → bullet list
+   * - "*emphasis*" → italic closing line
+   */
   body: string[]
 }
 
 export const POSTS: BlogPost[] = [
   {
     slug: 'marlin-trophy-fish',
-    title: 'Marlin: the trophy fish everyone really wants',
+    title:
+      'Marlin fishing in Madagascar — an unforgettable Indian Ocean adventure',
     excerpt:
-      'Blue water, heavy gear, and one fish that still stops the deck cold — why marlin is the dream catch for big-game anglers running out of Nosy Komba with AAM.',
-    date: '2026-10-08',
+      'Madagascar is more than beaches and rainforest — around Nosy Be and the Mitsio islands, blue water holds one of sport fishing’s most coveted prizes: the magnificent marlin.',
+    date: '2026-10-13',
     author: 'AAM Fishing',
     heroImage: '/blog/marlin-biggame-sunset.png',
     heroAlt:
       'Gold big-game reels and trolling rods on the boat rail at sunset, ready for offshore marlin fishing off Nosy Komba',
-    tags: ['Marlin', 'Big game', 'Nosy Komba'],
+    tags: ['Marlin', 'Madagascar', 'Nosy Be'],
     body: [
-      'Ask a serious angler what they came to Madagascar for, and plenty will say tuna or dorado without blinking. Ask what they really want — the fish that makes the whole trip feel earned — and the answer is almost always marlin.',
-      'Out of Nosy Komba, marlin is not a guarantee and never a prop for photos. It is a blue-water pursuit: early steam offshore, spreads set in clean colour, and hours of reading current lines, bird activity, and temperature breaks while the crew keeps the gear honest. When the season and the water line up, that long billfish strike is the moment the day was built for.',
-      'AAM Fishing and AAM Charters run the same coastal group from the island. Guests step onto a crewed sport boat with stout trolling rods, two-speed reels, and leaders ready for a fish that can empty a spool in seconds. The deck stays clear. Someone watches the outriggers. Someone is already thinking about the chair, the harness, and how the boat will turn when the line comes tight.',
-      'Northwest Madagascar’s offshore grounds hold striped and other billfish within reach when conditions favour a longer run. Some days the bite shows itself early; some days you search under a hard sun with nothing but wake and patience. That is part of the pull. Marlin fishing rewards people who treat the ocean as it is — not as a checklist of named waypoints.',
-      'When a marlin does come up, the fight is physical and loud. The angler works the rod; the crew manages the leader, the boat angle, and the release or boatside work. We fish for the fight first. Where tags, careful release, or a fish for the table make sense under local rules and the skipper’s call, we do it cleanly and without theatre.',
-      'If you are planning Nosy Komba or a nearby resort stay and the fish in your head is the one with the bill and the jump, ask for a dedicated big-game day aimed at marlin. We will match boat, tide window, and season so your hours go where trophy fish actually run — not where a brochure says they should.',
+      'Madagascar is not only an island of beautiful beaches, tropical forests, and unique wildlife. It is also one of the most compelling destinations for sport-fishing enthusiasts. In the deep waters of the Indian Ocean — especially around the Nosy Be and Mitsio archipelagos — lies one of the most sought-after catches for any passionate angler: the magnificent marlin.',
+      '## Marlin — king of the open sea',
+      'The marlin ranks among the fastest, strongest, and most admired fish in sport fishing. Its elegant, hydrodynamic body, long pointed bill, and extraordinary power place it among the toughest opponents on the open ocean.',
+      'In Madagascar’s waters you can encounter mainly blue and black marlin, along with other large pelagic species.',
+      'The blue marlin (Makaira nigricans) can grow into an exceptionally large fish weighing several hundred kilograms. When it takes the bait, a real test of strength, patience, and angling skill begins.',
+      'Its spectacular leaps from the water, sudden runs, and powerful pulls create moments anglers remember for a lifetime.',
+      '## Why is Madagascar so attractive for marlin fishing?',
+      'The northwest of Madagascar offers outstanding conditions for offshore sport fishing. Warm tropical seas, underwater reefs, deep channels, and rich marine life draw many species of large predatory fish.',
+      'Especially interesting areas include:',
+      '- Nosy Be: a popular starting point for offshore fishing expeditions.',
+      '- Nosy Komba: a beautiful tropical island from which fishing trips into the surrounding waters can be organised.',
+      '- The Mitsio archipelago: a more remote area with numerous reefs, underwater structure, and deeper water.',
+      '- The open sea northwest of Madagascar: ground for seeking large pelagic fish, including marlin.',
+      'Fishing in these areas is not only a hunt for a big fish. It is an experience of unspoiled nature, the endless ocean, and a sense of freedom that only the open sea can offer.',
+      '## How does marlin fishing work?',
+      'The most common technique for marlin is trolling, in which the boat tows artificial lures or specially prepared natural baits at a set speed.',
+      'Professional fishing gear includes stout rods, large saltwater reels, quality line, and specialised lures that imitate the movement of baitfish on the ocean surface.',
+      'The captain watches ocean currents, water temperature, the presence of bait schools, and the movement of seabirds. All of that can signal that large predators are nearby.',
+      'When a marlin takes the bait, calm observation of the ocean turns in an instant into an adrenaline-charged fight.',
+      'The fish can strip line from the reel at great speed, change direction, and launch itself high above the surface again and again. The fight may last from a few minutes to several hours, depending on the size of the fish, the gear, and conditions at sea.',
+      'It is precisely that unpredictability that makes marlin fishing so special.',
+      '## When is the best time for marlin fishing in Madagascar?',
+      'In the northwest waters of Madagascar, sport fishing is possible at various times of year, but marlin presence shifts with the season, ocean currents, and the availability of prey.',
+      'The period roughly from October to April can be interesting for large pelagic fish — though part of that window overlaps with the rainy and cyclone season.',
+      'The best timing therefore depends not only on where the fish are, but also on wind, swell, and safe running conditions.',
+      'An experienced local captain can advise, based on current conditions, when and where to go.',
+      '## Catch & Release — respect for the ocean',
+      'The marlin is an extraordinary animal with an important role in the marine ecosystem.',
+      'That is why Catch & Release — catch and release — is increasingly the standard in sport fishing.',
+      'The goal is to experience the encounter with this magnificent fish, document it when possible, and then release it back into the sea as safely as you can.',
+      'That means using appropriate gear, keeping the fight as short as possible, and, whenever you can, releasing the fish beside the boat without lifting it from the water.',
+      'This approach helps ensure that future generations of anglers can still admire these exceptional ocean dwellers.',
+      '## More than just fishing',
+      'A fishing expedition in Madagascar is a special experience even for those who care about more than the catch alone.',
+      'Picture an early morning as the boat leaves a tropical island. The sun rises slowly over the Indian Ocean, the horizon turns gold, and endless blue stretches around the boat.',
+      'Along the way you may see dolphins, seabirds, and occasionally other interesting ocean wildlife.',
+      'Every day at sea is different. Sometimes the reward is a spectacular catch; sometimes it is an unforgettable meeting with nature.',
+      'That is the real charm of a genuine fishing adventure.',
+      '## Experience marlin fishing in Madagascar',
+      'Whether you are an experienced sport angler or want to feel offshore fishing for the first time, northwest Madagascar is a destination with exceptional possibilities.',
+      'Marlin fishing combines adventure, skill, patience, and respect for nature.',
+      'Perhaps on your next expedition into the Indian Ocean you will live the moment when a mighty marlin rises from the depths and an unforgettable fight begins — between angler and one of the most magnificent fish in the world.',
+      '*The ocean does not promise a catch. It does promise an adventure you will not forget.*',
     ],
   },
   {

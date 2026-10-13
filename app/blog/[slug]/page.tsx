@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
@@ -12,6 +13,63 @@ import {
 
 type Props = {
   params: Promise<{ slug: string }>
+}
+
+/** Group consecutive "- " lines into one list; headings / italics / paragraphs otherwise. */
+function renderBodyBlocks(paragraphs: string[]) {
+  const nodes: ReactNode[] = []
+  let i = 0
+  while (i < paragraphs.length) {
+    const paragraph = paragraphs[i]
+    if (paragraph.startsWith('## ')) {
+      nodes.push(
+        <h2
+          key={`h-${i}`}
+          className="pt-4 font-serif text-2xl font-medium leading-snug text-foreground sm:text-3xl"
+        >
+          {paragraph.slice(3)}
+        </h2>,
+      )
+      i += 1
+      continue
+    }
+    if (paragraph.startsWith('- ')) {
+      const items: string[] = []
+      const start = i
+      while (i < paragraphs.length && paragraphs[i].startsWith('- ')) {
+        items.push(paragraphs[i].slice(2))
+        i += 1
+      }
+      nodes.push(
+        <ul
+          key={`ul-${start}`}
+          className="list-disc space-y-2 pl-6 marker:text-foreground/50"
+        >
+          {items.map((item, itemIndex) => (
+            <li key={`${start}-${itemIndex}`}>{item}</li>
+          ))}
+        </ul>,
+      )
+      continue
+    }
+    if (
+      paragraph.length >= 2 &&
+      paragraph.startsWith('*') &&
+      paragraph.endsWith('*') &&
+      !paragraph.startsWith('**')
+    ) {
+      nodes.push(
+        <p key={`em-${i}`} className="italic text-foreground/75">
+          {paragraph.slice(1, -1)}
+        </p>,
+      )
+      i += 1
+      continue
+    }
+    nodes.push(<p key={`p-${i}`}>{paragraph}</p>)
+    i += 1
+  }
+  return nodes
 }
 
 export async function generateStaticParams() {
@@ -98,9 +156,7 @@ export default async function BlogPostPage({ params }: Props) {
                 </p>
               )}
               <div className="mt-10 space-y-6 text-pretty text-lg leading-relaxed text-foreground/85">
-                {rest.map((paragraph) => (
-                  <p key={paragraph.slice(0, 48)}>{paragraph}</p>
-                ))}
+                {renderBodyBlocks(rest)}
               </div>
 
               <div className="mt-14 flex flex-col gap-4 border-t border-border pt-10 sm:flex-row sm:items-center sm:justify-between">
