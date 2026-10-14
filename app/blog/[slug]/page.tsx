@@ -15,12 +15,62 @@ type Props = {
   params: Promise<{ slug: string }>
 }
 
-/** Group consecutive "- " lines into one list; headings / italics / paragraphs otherwise. */
+/** Inline `**bold**` and `*italic*` (no nesting). */
+function renderInline(text: string): ReactNode[] {
+  const nodes: ReactNode[] = []
+  const re = /(\*\*[^*]+\*\*|\*[^*]+\*)/g
+  let last = 0
+  let match: RegExpExecArray | null
+  let key = 0
+  while ((match = re.exec(text)) !== null) {
+    if (match.index > last) {
+      nodes.push(text.slice(last, match.index))
+    }
+    const token = match[0]
+    if (token.startsWith('**')) {
+      nodes.push(
+        <strong key={`b-${key++}`} className="font-semibold text-foreground">
+          {token.slice(2, -2)}
+        </strong>,
+      )
+    } else {
+      nodes.push(
+        <em key={`i-${key++}`} className="italic">
+          {token.slice(1, -1)}
+        </em>,
+      )
+    }
+    last = match.index + token.length
+  }
+  if (last < text.length) nodes.push(text.slice(last))
+  return nodes
+}
+
+/**
+ * Body conventions:
+ * - "## Heading" / "### Heading" → section titles
+ * - "![alt](/path.jpg)" → full-bleed section figure
+ * - "- item" (consecutive) → bullet list
+ * - whole-line "*emphasis*" → italic closing line
+ * - plain strings → paragraphs (with inline **bold** / *italic*)
+ */
 function renderBodyBlocks(paragraphs: string[]) {
   const nodes: ReactNode[] = []
   let i = 0
   while (i < paragraphs.length) {
     const paragraph = paragraphs[i]
+    if (paragraph.startsWith('### ')) {
+      nodes.push(
+        <h3
+          key={`h3-${i}`}
+          className="pt-2 font-serif text-xl font-medium leading-snug text-foreground sm:text-2xl"
+        >
+          {paragraph.slice(4)}
+        </h3>,
+      )
+      i += 1
+      continue
+    }
     if (paragraph.startsWith('## ')) {
       nodes.push(
         <h2
@@ -29,6 +79,26 @@ function renderBodyBlocks(paragraphs: string[]) {
         >
           {paragraph.slice(3)}
         </h2>,
+      )
+      i += 1
+      continue
+    }
+    const imageMatch = /^!\[([^\]]*)\]\(([^)]+)\)$/.exec(paragraph)
+    if (imageMatch) {
+      const [, alt, src] = imageMatch
+      nodes.push(
+        <figure key={`fig-${i}`} className="my-8 -mx-2 sm:-mx-4">
+          <img
+            src={src}
+            alt={alt}
+            className="aspect-[16/10] w-full object-cover"
+          />
+          {alt ? (
+            <figcaption className="mt-3 text-sm text-muted-foreground">
+              {alt}
+            </figcaption>
+          ) : null}
+        </figure>,
       )
       i += 1
       continue
@@ -46,7 +116,7 @@ function renderBodyBlocks(paragraphs: string[]) {
           className="list-disc space-y-2 pl-6 marker:text-foreground/50"
         >
           {items.map((item, itemIndex) => (
-            <li key={`${start}-${itemIndex}`}>{item}</li>
+            <li key={`${start}-${itemIndex}`}>{renderInline(item)}</li>
           ))}
         </ul>,
       )
@@ -56,7 +126,8 @@ function renderBodyBlocks(paragraphs: string[]) {
       paragraph.length >= 2 &&
       paragraph.startsWith('*') &&
       paragraph.endsWith('*') &&
-      !paragraph.startsWith('**')
+      !paragraph.startsWith('**') &&
+      paragraph.indexOf('*', 1) === paragraph.length - 1
     ) {
       nodes.push(
         <p key={`em-${i}`} className="italic text-foreground/75">
@@ -66,7 +137,7 @@ function renderBodyBlocks(paragraphs: string[]) {
       i += 1
       continue
     }
-    nodes.push(<p key={`p-${i}`}>{paragraph}</p>)
+    nodes.push(<p key={`p-${i}`}>{renderInline(paragraph)}</p>)
     i += 1
   }
   return nodes
