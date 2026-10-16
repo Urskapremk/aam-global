@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, Building2, Check } from 'lucide-react'
+import { Loader2, Building2, Check, Mail } from 'lucide-react'
 import {
   updateCompanySettings,
   type CompanySettings,
@@ -32,6 +32,7 @@ export function CompanySettingsForm({ initial }: { initial: CompanySettings }) {
       email: form.email,
       phone: form.phone,
       invoicePrefix: form.invoicePrefix,
+      forwardEmail: form.forwardEmail.trim(),
     })
     setSaving(false)
     setSaved(true)
@@ -98,6 +99,26 @@ export function CompanySettingsForm({ initial }: { initial: CompanySettings }) {
           </Field>
           <Field label="IBAN">
             <input value={form.iban} onChange={(e) => set('iban', e.target.value)} className={inputCls} />
+          </Field>
+        </div>
+
+        <div className="mb-2 mt-6 flex items-center gap-2 text-sm font-medium text-foreground">
+          <Mail className="h-4 w-4 text-accent" strokeWidth={1.5} />
+          Gmail
+        </div>
+        <p className="mb-3 text-sm text-muted-foreground">
+          Every email that arrives in the admin inbox is also forwarded to this
+          address. Replying in Gmail goes straight back to the sender.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Forward inbound emails to">
+            <input
+              type="email"
+              value={form.forwardEmail}
+              onChange={(e) => set('forwardEmail', e.target.value)}
+              className={inputCls}
+              placeholder="you@gmail.com"
+            />
           </Field>
         </div>
 

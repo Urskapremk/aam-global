@@ -71,6 +71,7 @@ export type Transfer = {
 export type CompanySettings = CompanyInfo & {
   invoicePrefix: string
   invoiceCounter: number
+  forwardEmail: string
 }
 
 function serializeRoute(r: typeof transferRoutes.$inferSelect): TransferRoute {
@@ -158,6 +159,7 @@ export async function getCompanySettings(): Promise<CompanySettings> {
     phone: r.phone,
     invoicePrefix: r.invoicePrefix,
     invoiceCounter: r.invoiceCounter,
+    forwardEmail: r.forwardEmail,
   }
 }
 

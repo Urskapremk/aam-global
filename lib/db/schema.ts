@@ -283,6 +283,8 @@ export const companySettings = pgTable('company_settings', {
   phone: text('phone').notNull().default(''),
   invoicePrefix: text('invoicePrefix').notNull().default('AAM'),
   invoiceCounter: integer('invoiceCounter').notNull().default(0), // last used seq
+  // Gmail (or any) address that receives a copy of every inbound email.
+  forwardEmail: text('forwardEmail').notNull().default(''),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 })
 

@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import crypto from 'node:crypto'
 import { db } from '@/lib/db'
-import { messages } from '@/lib/db/schema'
+import { companySettings, messages } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
+import { sendEmail } from '@/lib/email'
 import { folderForSender } from '@/lib/mail-rules'
 import { sendPushToAll } from '@/lib/push'
 
@@ -64,6 +66,8 @@ export async function POST(request: Request) {
     ...(folderId != null ? { folderId } : {}),
   })
 
+  await forwardCopy({ from, name, to, subject, text: body, html })
+
   // Ring every subscribed device (works even when the app is closed).
   try {
     await sendPushToAll({
@@ -77,6 +81,46 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ ok: true })
+}
+
+/**
+ * Send a copy to the Gmail address set in Admin → Company details.
+ * reply_to is the original sender, so hitting Reply in Gmail answers them.
+ */
+async function forwardCopy(m: {
+  from: string
+  name: string
+  to: string
+  subject: string
+  text: string
+  html: string
+}) {
+  try {
+    const [row] = await db
+      .select({ forwardEmail: companySettings.forwardEmail })
+      .from(companySettings)
+      .where(eq(companySettings.id, 1))
+      .limit(1)
+    const target = row?.forwardEmail?.trim()
+    if (!target || target.toLowerCase() === m.from.toLowerCase()) return
+
+    const header = `<div style="font:13px Arial,sans-serif;color:#555;border-bottom:1px solid #ddd;padding-bottom:8px;margin-bottom:12px">From: <b>${esc(m.name)}</b> &lt;${esc(m.from)}&gt;<br/>To: ${esc(m.to)}</div>`
+    const content = m.html || `<pre style="white-space:pre-wrap;font:14px Arial,sans-serif">${esc(m.text)}</pre>`
+
+    await sendEmail({
+      to: target,
+      subject: m.subject,
+      html: header + content,
+      text: `From: ${m.name} <${m.from}>\n\n${m.text}`,
+      ...(m.from ? { replyTo: m.from } : {}),
+    })
+  } catch (err) {
+    console.error('[v0] forward to Gmail failed:', err)
+  }
+}
+
+function esc(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
 /**
