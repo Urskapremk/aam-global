@@ -388,11 +388,207 @@ export async function ensureOdysseyIiNaturalisation25100(): Promise<void> {
   }
 }
 
+type OdysseyIiSeedDoc = {
+  id: string
+  fileName: string
+  blobPath: string
+  category: string
+  name: string
+  number?: string
+  issuingAuthority?: string
+  issueDate?: string
+  expiryDate?: string
+  notes: string
+  reason: string
+}
+
+async function odysseyIiSeedFileUrl(doc: OdysseyIiSeedDoc): Promise<string> {
+  const publicUrl = `/documents/${doc.fileName}`
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return publicUrl
+  try {
+    const body = await readFile(
+      path.join(process.cwd(), 'public', 'documents', doc.fileName),
+    )
+    const blob = await put(doc.blobPath, body, {
+      access: 'public',
+      addRandomSuffix: false,
+      contentType: 'image/png',
+    })
+    return blob.url
+  } catch (err) {
+    console.error(`Odyssey II blob upload failed (${doc.fileName}):`, err)
+    return publicUrl
+  }
+}
+
+async function fileOdysseyIiSeedDoc(doc: OdysseyIiSeedDoc): Promise<void> {
+  await requireAdmin()
+  try {
+    const [existing] = await db
+      .select({ id: complianceDocuments.id })
+      .from(complianceDocuments)
+      .where(eq(complianceDocuments.id, doc.id))
+      .limit(1)
+    if (existing) return
+    const fileUrl = await odysseyIiSeedFileUrl(doc)
+    await db.insert(complianceDocuments).values({
+      id: doc.id,
+      boat: 'odyssey-ii',
+      category: doc.category,
+      name: doc.name,
+      number: doc.number ?? null,
+      issuingAuthority: doc.issuingAuthority ?? null,
+      issueDate: doc.issueDate ?? null,
+      expiryDate: doc.expiryDate ?? null,
+      fileUrl,
+      status: 'valid',
+      notes: doc.notes,
+      createdBy: 'Urška',
+    })
+    await db.insert(complianceAudit).values({
+      id: newId('aud'),
+      recordType: 'document',
+      recordId: doc.id,
+      action: 'create',
+      newValue: doc.name,
+      reason: doc.reason,
+      userName: 'Urška',
+    })
+  } catch (err) {
+    console.error(`Could not file Odyssey II document ${doc.id}:`, err)
+  }
+}
+
+const ODYSSEY_II_BATCH_DOCS: OdysseyIiSeedDoc[] = [
+  {
+    id: 'doc-odyssey-ii-permis-hv-25-111',
+    fileName: 'odyssey-ii-permis-navigation.png',
+    blobPath: 'aam/compliance/odyssey-ii/permis-navigation-hv-25-111.png',
+    category: 'permis-navigation',
+    name: 'Permis de navigation — HV 25.111',
+    number: 'HV 25.111',
+    issuingAuthority:
+      'APMF Direction Régionale Nosy Be (Agence Portuaire, Maritime et Fluviale)',
+    issueDate: '2025-12-15',
+    expiryDate: '2026-12-10',
+    notes: [
+      'Permis de navigation de la Marine Marchande for vedette ODYSSEY II.',
+      'Registration HV 25.111, Nosy Be. Navigation zone: littorale.',
+      'Crew 1, passengers 5. Propulsion 1×60CV Suzuki. Jauge brute 01.48 Tx.',
+      'Owner: Monsieur Schneider Michael (request 13 Nov 2025). Visit 11 Dec 2025.',
+      'Issued Nosy Be 15 Dec 2025, valid until 10 Dec 2026. Signed Rabialahy Jean Paul.',
+      'Nota: this document is not a title of ownership.',
+    ].join(' '),
+    reason:
+      'Filed from the APMF permis de navigation HV 25.111 (Nosy Be, 15 Dec 2025).',
+  },
+  {
+    id: 'doc-odyssey-ii-rapport-visite-2025-12-11-p1',
+    fileName: 'odyssey-ii-rapport-visite-1.png',
+    blobPath: 'aam/compliance/odyssey-ii/rapport-visite-2025-12-11-p1.png',
+    category: 'safety-inspection',
+    name: 'Rapport de visite — p.1 (11 Dec 2025)',
+    number: 'HV 25.111',
+    issuingAuthority: 'APMF Direction Régionale Nosy Be',
+    issueDate: '2025-12-11',
+    expiryDate: '2026-12-10',
+    notes: [
+      'Page 1 of the APMF Nosy Be rapport de visite, 11 Dec 2025, visite de mise en service.',
+      'Vedette ODYSSEY II, HV 25.111. Owner Schneider. Hull 4.70×1.90 m, polyester, built 2024 South Africa.',
+      'Plaisance, 5 passengers, navigation littorale. Skipper Behamby William.',
+      'Insurance line on the form said “à souscrire” (the later A.R.O. policy is filed separately).',
+    ].join(' '),
+    reason: 'Filed from rapport de visite page 1 (APMF Nosy Be, 11 Dec 2025).',
+  },
+  {
+    id: 'doc-odyssey-ii-rapport-visite-2025-12-11-p2',
+    fileName: 'odyssey-ii-rapport-visite-2.png',
+    blobPath: 'aam/compliance/odyssey-ii/rapport-visite-2025-12-11-p2.png',
+    category: 'safety-inspection',
+    name: 'Rapport de visite — p.2 (11 Dec 2025)',
+    number: 'HV 25.111',
+    issuingAuthority: 'APMF Direction Régionale Nosy Be',
+    issueDate: '2025-12-11',
+    expiryDate: '2026-12-10',
+    notes: [
+      'Page 2 of the APMF Nosy Be rapport de visite, 11 Dec 2025.',
+      'Propulsion: 1×60CV Suzuki outboard.',
+      'Safety gear: powder extinguisher expiring July 2026; 6 adult lifejackets.',
+      'Conclusion: fit to navigate Madagascar territorial waters. Permis valid until 10 Dec 2026.',
+      'Signed Rabialahy Jean Paul, Inspecteur des Affaires Maritimes.',
+    ].join(' '),
+    reason: 'Filed from rapport de visite page 2 (APMF Nosy Be, 11 Dec 2025).',
+  },
+  {
+    id: 'doc-odyssey-ii-franc-bord-625',
+    fileName: 'odyssey-ii-franc-bord.png',
+    blobPath: 'aam/compliance/odyssey-ii/franc-bord-625-fb-hv.png',
+    category: 'other',
+    name: 'Certificat international de franc-bord — n° 625-FB/HV',
+    number: '625-FB/HV',
+    issuingAuthority: 'APMF, Nosy-Be (République de Madagascar)',
+    issueDate: '2025-11-11',
+    expiryDate: '2026-11-24',
+    notes: [
+      'Certificat international de franc-bord (1966), n° 625-FB/HV.',
+      'Vessel ODYSSEY II, port of registry Nosy-Be, length 4.43 m.',
+      'Type B, existing ship (navire existant).',
+      'Survey November 2025. Issued Nosy-Be 11 Nov 2025, valid until 24 Nov 2026.',
+      'Signed Rabialahy Jean Paul.',
+    ].join(' '),
+    reason:
+      'Filed from the certificat international de franc-bord n° 625-FB/HV (11 Nov 2025).',
+  },
+  {
+    id: 'doc-odyssey-ii-skipper-schneider-samsa',
+    fileName: 'odyssey-ii-skipper-schneider-samsa.png',
+    blobPath: 'aam/compliance/odyssey-ii/skipper-schneider-samsa.png',
+    category: 'captain-licence',
+    name: 'Skipper certificate — Michael Schneider (SAMSA)',
+    number: 'SVC-0017212-S',
+    issuingAuthority: 'South African Maritime Safety Authority (SAMSA)',
+    issueDate: '2015-01-28',
+    notes: [
+      'Person document, not a vessel title. Filed on the ODYSSEY II register as owner/skipper competency.',
+      'Republic of South Africa Certificate of Competency. Holder: MICHAEL SCHNEIDER.',
+      'Certificate SVC-0017212-S. ID 7409305248086.',
+      'Coastal Skipper limited to 40 nautical miles. Category B vessel under 9 m.',
+      'Test 20 Aug 2014 (SADSAA). Dated Pretoria 28 Jan 2015.',
+    ].join(' '),
+    reason:
+      'Filed from the SAMSA certificate of competency SVC-0017212-S (Michael Schneider).',
+  },
+  {
+    id: 'doc-odyssey-ii-photo-hull',
+    fileName: 'odyssey-ii-photo-hull.png',
+    blobPath: 'aam/compliance/odyssey-ii/photo-hull.png',
+    category: 'other',
+    name: 'Photo — Odyssey II',
+    number: 'HV 25-111',
+    notes: [
+      'Photograph of ODYSSEY II on a trailer, registration HV 25-111 painted on the hull.',
+      'Stored upright. The vessel compliance profile has no photo field, so the picture is filed here.',
+    ].join(' '),
+    reason: 'Filed the hull photograph of ODYSSEY II (HV 25-111).',
+  },
+]
+
+/**
+ * File the Dec 2025 APMF pack and the owner skipper certificate on ODYSSEY II.
+ * Idempotent on stable ids. Does not touch insurance or naturalisation rows.
+ */
+export async function ensureOdysseyIiDocumentBatch(): Promise<void> {
+  for (const doc of ODYSSEY_II_BATCH_DOCS) {
+    await fileOdysseyIiSeedDoc(doc)
+  }
+}
+
 async function ensureOdysseyIiFiledDocuments(): Promise<void> {
   await ensureOdysseyIiInsuranceAttestation()
   await ensureOdysseyIiNaturalisationCover()
   await ensureOdysseyIiNaturalisationAct()
   await ensureOdysseyIiNaturalisation25100()
+  await ensureOdysseyIiDocumentBatch()
 }
 
 export type ComplianceDoc = {
