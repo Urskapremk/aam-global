@@ -2,6 +2,8 @@
 
 import { Printer } from 'lucide-react'
 
+import { ExpiryNotice } from '@/components/compliance/expiry-notice'
+import { OfficialTitle } from '@/components/compliance/official-title'
 import { Button } from '@/components/ui/button'
 import {
   docCategoryLabel,
@@ -10,6 +12,7 @@ import {
   statusChip,
   STATUS_LABEL,
 } from '@/lib/compliance'
+import { useT } from '@/lib/i18n/context'
 import type { InspectionView } from '@/app/actions/inspection'
 import { BOATS } from '@/lib/boats'
 
@@ -44,6 +47,7 @@ const LEGAL_REFERENCES = [
 type Props = { boat: string; view: InspectionView }
 
 export function InspectionViewClient({ boat, view }: Props) {
+  const t = useT()
   return (
     <div className="space-y-6">
       {/* Controls — hidden when printing. */}
@@ -113,10 +117,10 @@ export function InspectionViewClient({ boat, view }: Props) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-[0.08em] text-muted-foreground print:border-black print:text-black">
-                  <th className="py-2">Document</th>
-                  <th className="py-2">Number</th>
-                  <th className="py-2">Authority</th>
-                  <th className="py-2">Expiry</th>
+                  <th className="py-2">{t('Document name')}</th>
+                  <th className="py-2">{t('Number / reference')}</th>
+                  <th className="py-2">{t('Issuing authority')}</th>
+                  <th className="py-2">{t('Expiry date')}</th>
                   <th className="py-2">Status</th>
                   <th className="py-2 print:hidden">Scan</th>
                 </tr>
@@ -130,7 +134,10 @@ export function InspectionViewClient({ boat, view }: Props) {
                       className="border-b border-border/60 print:border-black/30"
                     >
                       <td className="py-2 text-foreground print:text-black">
-                        {docCategoryLabel(d.category)}
+                        <OfficialTitle name={d.name} />
+                        <span className="mt-0.5 block text-[11px] uppercase tracking-[0.08em] text-muted-foreground print:text-black">
+                          {t(docCategoryLabel(d.category))}
+                        </span>
                       </td>
                       <td className="py-2 text-muted-foreground print:text-black">
                         {d.number ?? '—'}
@@ -138,15 +145,15 @@ export function InspectionViewClient({ boat, view }: Props) {
                       <td className="py-2 text-muted-foreground print:text-black">
                         {d.issuingAuthority ?? '—'}
                       </td>
-                      <td className="py-2 text-muted-foreground print:text-black">
-                        {fmtDate(d.expiryDate)}
+                      <td className="py-2">
+                        <ExpiryNotice expiryDate={d.expiryDate} />
                       </td>
                       <td className="py-2">
                         <span
                           className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${chip.bg} ${chip.text} print:bg-transparent print:text-black`}
                         >
                           <span className={`h-1.5 w-1.5 rounded-full ${chip.dot}`} />
-                          {STATUS_LABEL[d.status]}
+                          {t(STATUS_LABEL[d.status])}
                         </span>
                       </td>
                       <td className="py-2 print:hidden">

@@ -4,13 +4,14 @@ import { useState, useTransition } from 'react'
 import { Plus, Pencil, Archive, X, FileText, RotateCcw, ExternalLink } from 'lucide-react'
 
 import { ImageUpload } from '@/components/admin/image-upload'
+import { ExpiryNotice } from '@/components/compliance/expiry-notice'
+import { OfficialTitle } from '@/components/compliance/official-title'
 import { Button } from '@/components/ui/button'
 import { useT } from '@/lib/i18n/context'
 import {
   DOC_CATEGORIES,
   docCategoryLabel,
-  docTitleGlossKey,
-  formatExpiryLine,
+  officialDocTitle,
   STATUS_LABEL,
   type ComplianceStatus,
 } from '@/lib/compliance'
@@ -38,20 +39,6 @@ function StatusBadge({ status }: { status: ComplianceStatus }) {
       <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />
       {t(STATUS_LABEL[status])}
     </span>
-  )
-}
-
-function OfficialTitle({ name }: { name: string }) {
-  const t = useT()
-  const key = docTitleGlossKey(name)
-  if (!key) return <>{name}</>
-  const gloss = t(key)
-  if (gloss === key) return <>{name}</>
-  return (
-    <>
-      {gloss}
-      <span className="font-normal text-muted-foreground"> · {name}</span>
-    </>
   )
 }
 
@@ -288,7 +275,9 @@ export function DocumentRegister({
             )}
           </p>
         )}
-        {live.map((d) => (
+        {live.map((d) => {
+          const title = officialDocTitle(t, d.name)
+          return (
           <div
             key={d.id}
             className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-border bg-card p-4"
@@ -300,6 +289,10 @@ export function DocumentRegister({
                   <OfficialTitle name={d.name} />
                 </span>
                 <StatusBadge status={d.effective} />
+                <ExpiryNotice
+                  expiryDate={d.expiryDate}
+                  days={d.daysUntilExpiry}
+                />
               </div>
               <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
                 {t(docCategoryLabel(d.category))}
@@ -311,10 +304,7 @@ export function DocumentRegister({
                   </p>
                 )}
                 {d.issuingAuthority && <p>{d.issuingAuthority}</p>}
-                {d.expiryDate && (
-                  <p>{formatExpiryLine(t, d.expiryDate, d.daysUntilExpiry)}</p>
-                )}
-                {d.notes && <p className="italic">{d.notes}</p>}
+                {d.notes && <p className="italic">{t(d.notes)}</p>}
               </div>
               {d.fileUrl && (
                 <a
@@ -327,7 +317,7 @@ export function DocumentRegister({
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={d.fileUrl}
-                      alt={d.name}
+                      alt={title.primary}
                       className="h-28 w-auto max-w-full rounded-md border border-border object-contain object-left"
                     />
                   )}
@@ -343,7 +333,7 @@ export function DocumentRegister({
                 type="button"
                 onClick={() => openEdit(d)}
                 className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label={`${t('Amend')} ${d.name}`}
+                aria-label={`${t('Amend')} ${title.primary}`}
               >
                 <Pencil className="h-4 w-4" />
               </button>
@@ -351,13 +341,14 @@ export function DocumentRegister({
                 type="button"
                 onClick={() => archive(d)}
                 className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label={`${t('Archive document')} ${d.name}`}
+                aria-label={`${t('Archive document')} ${title.primary}`}
               >
                 <Archive className="h-4 w-4" />
               </button>
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
 
       {archived.length > 0 && (
@@ -377,9 +368,14 @@ export function DocumentRegister({
                   key={d.id}
                   className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 px-4 py-2.5 text-sm"
                 >
-                  <span className="text-muted-foreground line-through">
-                    <OfficialTitle name={d.name} />
-                    {d.expiryDate ? ` · ${t('expired')} ${d.expiryDate}` : ''}
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="text-muted-foreground line-through">
+                      <OfficialTitle name={d.name} />
+                    </span>
+                    <ExpiryNotice
+                      expiryDate={d.expiryDate}
+                      days={d.daysUntilExpiry}
+                    />
                   </span>
                   <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                     {t(docCategoryLabel(d.category))}

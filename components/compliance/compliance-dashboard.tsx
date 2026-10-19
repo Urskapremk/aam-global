@@ -12,31 +12,16 @@ import type {
   ExpiryAlert,
   VesselCompliance,
 } from '@/app/actions/compliance'
+import { ExpiryNotice } from '@/components/compliance/expiry-notice'
+import { OfficialTitle } from '@/components/compliance/official-title'
 import {
-  daysUntil,
   docCategoryLabel,
-  docTitleGlossKey,
-  formatExpiryLine,
   STATUS_LABEL,
   statusChip,
   type ComplianceStatus,
 } from '@/lib/compliance'
 import { useT } from '@/lib/i18n/context'
 import { cn } from '@/lib/utils'
-
-function OfficialTitle({ name }: { name: string }) {
-  const t = useT()
-  const key = docTitleGlossKey(name)
-  if (!key) return <>{name}</>
-  const gloss = t(key)
-  if (gloss === key) return <>{name}</>
-  return (
-    <>
-      {gloss}
-      <span className="font-normal"> · {name}</span>
-    </>
-  )
-}
 
 function StatusPill({ status }: { status: ComplianceStatus }) {
   const t = useT()
@@ -58,10 +43,6 @@ function StatusPill({ status }: { status: ComplianceStatus }) {
 function AlertRow({ alert }: { alert: ExpiryAlert }) {
   const t = useT()
   const critical = alert.status === 'expired'
-  const when =
-    alert.expiryDate != null
-      ? formatExpiryLine(t, alert.expiryDate, alert.days ?? daysUntil(alert.expiryDate))
-      : null
   return (
     <div className="flex items-center gap-3 border-b border-border/60 px-1 py-3 last:border-b-0">
       <AlertTriangle
@@ -77,9 +58,10 @@ function AlertRow({ alert }: { alert: ExpiryAlert }) {
         <span className="text-muted-foreground">·</span>{' '}
         <OfficialTitle name={alert.docName} />{' '}
         <span className="text-muted-foreground">
-          ({t(docCategoryLabel(alert.category))}) {when}
+          ({t(docCategoryLabel(alert.category))})
         </span>
       </p>
+      <ExpiryNotice expiryDate={alert.expiryDate} days={alert.days} />
     </div>
   )
 }
@@ -112,9 +94,12 @@ function VesselCard({ vessel }: { vessel: VesselCompliance }) {
               <p className="truncate text-sm text-foreground">
                 {t(docCategoryLabel(category))}
               </p>
-              {doc?.expiryDate && (
-                <p className="text-[11px] text-muted-foreground">
-                  {formatExpiryLine(t, doc.expiryDate, doc.daysUntilExpiry)}
+              {doc && (
+                <p className="mt-1">
+                  <ExpiryNotice
+                    expiryDate={doc.expiryDate}
+                    days={doc.daysUntilExpiry}
+                  />
                 </p>
               )}
               {!doc && (
@@ -127,6 +112,34 @@ function VesselCard({ vessel }: { vessel: VesselCompliance }) {
           </li>
         ))}
       </ul>
+
+      {vessel.documents.some(
+        (d) => !vessel.core.some((c) => c.doc?.id === d.id),
+      ) && (
+        <div className="mt-4">
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            {t('Other documents')}
+          </p>
+          <ul className="mt-2 space-y-2">
+            {vessel.documents
+              .filter((d) => !vessel.core.some((c) => c.doc?.id === d.id))
+              .map((d) => (
+                <li
+                  key={d.id}
+                  className="flex flex-wrap items-center justify-between gap-2"
+                >
+                  <p className="min-w-0 truncate text-sm text-foreground">
+                    <OfficialTitle name={d.name} />
+                  </p>
+                  <ExpiryNotice
+                    expiryDate={d.expiryDate}
+                    days={d.daysUntilExpiry}
+                  />
+                </li>
+              ))}
+          </ul>
+        </div>
+      )}
 
       <Link
         href={`/admin/compliance/${vessel.boat}`}
@@ -162,7 +175,7 @@ export function ComplianceDashboard({
         <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-4">
           <ShieldCheck className="h-5 w-5 text-[#4f7a54]" strokeWidth={1.75} />
           <p className="text-sm text-foreground">
-            {t('No documents expiring in the next 30 days.')}
+            {t('No documents expiring in the next 60 days.')}
           </p>
         </div>
       )}

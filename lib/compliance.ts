@@ -50,10 +50,11 @@ export const STATUS_LABEL: Record<ComplianceStatus, string> = {
   pending: 'Pending',
 }
 
-// Expiry alert thresholds, from the spec. A document inside the widest window
-// reads as "expiring"; past its date, "expired".
+// Expiry alert thresholds, from the spec. The on-screen warning (amber) starts
+// 60 days out; past the date it turns red.
 export const EXPIRY_ALERT_DAYS = [90, 60, 30, 14, 7] as const
-const EXPIRING_WINDOW_DAYS = 30
+export const EXPIRY_SOON_DAYS = 60
+const EXPIRING_WINDOW_DAYS = EXPIRY_SOON_DAYS
 
 // Whole days from today (lodge-local, UTC+3) until the given calendar date.
 // Negative once the date has passed. Date-only maths on the YYYY-MM-DD string
@@ -135,6 +136,73 @@ export function statusChip(status: ComplianceStatus): {
   }
 }
 
+const VALIDITY_MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+] as const
+
+// "13 Apr 2027" from a YYYY-MM-DD value. Built from the date parts so a
+// timezone conversion cannot move the calendar day.
+export function formatValidityDate(dateStr: string): string {
+  const [y, m, d] = String(dateStr).slice(0, 10).split('-').map(Number)
+  if (!y || !m || !d || m < 1 || m > 12) return String(dateStr).slice(0, 10)
+  return `${d} ${VALIDITY_MONTHS[m - 1]} ${y}`
+}
+
+export type ExpiryTone = 'none' | 'current' | 'soon' | 'expired'
+
+// none = no validity end; soon = inside 60 days (including today); expired = past.
+export function expiryTone(
+  dateStr: string | null | undefined,
+  days?: number | null,
+): ExpiryTone {
+  if (!dateStr) return 'none'
+  const n = days === undefined ? daysUntil(dateStr) : days
+  if (n == null) return 'current'
+  if (n < 0) return 'expired'
+  if (n <= EXPIRY_SOON_DAYS) return 'soon'
+  return 'current'
+}
+
+// Labels Urška asked for. Soon is Poteče / Expiring soon; lapsed is Poteklo /
+// Expired. A later date still says Poteče / Expires, without the warning colour.
+// Documents with no end date say brez roka / No expiry — never an invented date.
+export function expiryNoticeLabel(
+  lang: 'en' | 'sl',
+  tone: ExpiryTone,
+): string {
+  if (lang === 'sl') {
+    if (tone === 'none') return 'brez roka'
+    if (tone === 'expired') return 'Poteklo'
+    return 'Poteče'
+  }
+  if (tone === 'none') return 'No expiry'
+  if (tone === 'expired') return 'Expired'
+  if (tone === 'soon') return 'Expiring soon'
+  return 'Expires'
+}
+
+export function expiryNoticeText(
+  lang: 'en' | 'sl',
+  dateStr: string | null | undefined,
+  days?: number | null,
+): { tone: ExpiryTone; text: string } {
+  const tone = expiryTone(dateStr, days)
+  const label = expiryNoticeLabel(lang, tone)
+  if (tone === 'none' || !dateStr) return { tone: 'none', text: label }
+  return { tone, text: `${label} ${formatValidityDate(dateStr)}` }
+}
+
 // A short human phrase for how far off an expiry is, e.g. "in 21 days",
 // "expired 4 days ago", "today".
 export function expiryPhrase(dateStr: string | null | undefined): string | null {
@@ -149,17 +217,22 @@ export function expiryPhrase(dateStr: string | null | undefined): string | null 
 }
 
 // English gloss used as the i18n source key. The stored title stays French
-// (or whatever was filed). Slovenian is the dictionary value for this key.
+// (or whatever was filed) and is shown as a secondary line in Slovenian.
+// More specific titles are listed before the generic Acte de naturalisation.
 const DOC_TITLE_GLOSS: { test: RegExp; key: string }[] = [
   { test: /^permis de navigation\b/i, key: 'Navigation permit' },
   { test: /^rôle d['’]équipage\b/i, key: 'Crew list' },
   { test: /^role d['’]equipage\b/i, key: 'Crew list' },
   { test: /^bon de partance\b/i, key: 'Departure clearance' },
   { test: /^rapport de visite\b/i, key: 'Visit report' },
-  { test: /^certificat international de franc-bord\b/i, key: 'International freeboard certificate' },
+  { test: /^certificat (international )?de franc-bord\b/i, key: 'Freeboard certificate' },
+  { test: /apmf cover/i, key: 'APMF naturalisation cover' },
+  { test: /navire malgache/i, key: 'Malagasy vessel naturalisation' },
   { test: /^acte de naturalisation\b/i, key: 'Naturalisation deed' },
   { test: /^attestation d['’]assurance\b/i, key: 'Insurance certificate' },
+  { test: /^insurance\b/i, key: 'Insurance certificate' },
   { test: /^skipper certificate\b/i, key: 'Skipper competency certificate' },
+  { test: /\bsamsa\b/i, key: 'Skipper competency certificate' },
   { test: /^photo\b/i, key: 'Photograph' },
 ]
 
@@ -168,30 +241,28 @@ export function docTitleGlossKey(name: string): string | null {
   return DOC_TITLE_GLOSS.find((r) => r.test.test(n))?.key ?? null
 }
 
-// "Expires 2026-12-10 · in 21 days", in the active admin language.
-// Slovenian day forms are fixed here because the dictionary has no placeholders.
+// Slovenian primary title, or the filed name when the language has no gloss.
+// `official` is the stored French (or other) name, shown on a second line.
+export function officialDocTitle(
+  t: (s: string) => string,
+  name: string,
+): { primary: string; official: string | null } {
+  const key = docTitleGlossKey(name)
+  if (!key) return { primary: name, official: null }
+  const gloss = t(key)
+  if (gloss === key) return { primary: name, official: null }
+  return { primary: gloss, official: name }
+}
+
+// "Expires 10 Dec 2026" / "Expiring soon 10 Dec 2026" / "Expired 10 Dec 2026".
+// `t` is only used to detect Slovenian (the dictionary has no placeholders).
 export function formatExpiryLine(
   t: (s: string) => string,
   date: string,
   days: number | null,
 ): string {
-  const head = `${t('Expires')} ${date}`
-  if (days == null) return head
-  if (days === 0) return `${head} · ${t('expires today')}`
-  const n = Math.abs(days)
-  const sl = t('days') === 'dni'
-  if (days < 0) {
-    if (sl) {
-      const unit = n === 1 ? 'dnem' : n === 2 ? 'dnevoma' : 'dnevi'
-      return `${head} · pred ${n} ${unit}`
-    }
-    return `${head} · ${t('expired')} ${n} ${n === 1 ? t('day') : t('days')} ${t('ago')}`
-  }
-  if (sl) {
-    const unit = n === 1 ? 'dan' : n === 2 ? 'dneva' : 'dni'
-    return `${head} · čez ${n} ${unit}`
-  }
-  return `${head} · ${t('in')} ${n} ${n === 1 ? t('day') : t('days')}`
+  const lang = t('days') === 'dni' ? 'sl' : 'en'
+  return expiryNoticeText(lang, date, days).text
 }
 
 // --- Journal de bord (voyage logbook) --------------------------------------

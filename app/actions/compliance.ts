@@ -28,6 +28,35 @@ async function requireAdmin() {
   if (!(await isAdmin())) throw new Error('Unauthorized')
 }
 
+/** Write a validity end onto a row that was filed without one. Never clears or replaces a date already stored. */
+async function fillExpiryIfMissing(
+  id: string,
+  expiryDate: string | null | undefined,
+): Promise<void> {
+  if (!expiryDate) return
+  const [row] = await db
+    .select({ expiryDate: complianceDocuments.expiryDate })
+    .from(complianceDocuments)
+    .where(eq(complianceDocuments.id, id))
+    .limit(1)
+  if (!row || row.expiryDate) return
+  await db
+    .update(complianceDocuments)
+    .set({ expiryDate, updatedAt: new Date() })
+    .where(eq(complianceDocuments.id, id))
+  await db.insert(complianceAudit).values({
+    id: newId('aud'),
+    recordType: 'document',
+    recordId: id,
+    action: 'amend',
+    field: 'expiryDate',
+    previousValue: null,
+    newValue: expiryDate,
+    reason: 'Recorded the validity end already printed on the filed scan.',
+    userName: 'Urška',
+  })
+}
+
 /** Stable id so the A.R.O. attestation is inserted once and never duplicated. */
 const ODYSSEY_II_INSURANCE_ID = 'doc-odyssey-ii-aro-2788'
 const ODYSSEY_II_INSURANCE_PUBLIC = '/documents/odyssey-ii-insurance-attestation.png'
@@ -151,6 +180,7 @@ export async function ensureOdysseyIiInsuranceAttestation(): Promise<void> {
         userName: 'Urška',
       })
     }
+    await fillExpiryIfMissing(ODYSSEY_II_INSURANCE_ID, '2027-04-13')
 
     const [profile] = await db
       .select()
@@ -429,7 +459,10 @@ async function fileOdysseyIiSeedDoc(doc: OdysseyIiSeedDoc): Promise<void> {
       .from(complianceDocuments)
       .where(eq(complianceDocuments.id, doc.id))
       .limit(1)
-    if (existing) return
+    if (existing) {
+      await fillExpiryIfMissing(doc.id, doc.expiryDate)
+      return
+    }
     const fileUrl = await odysseyIiSeedFileUrl(doc)
     await db.insert(complianceDocuments).values({
       id: doc.id,

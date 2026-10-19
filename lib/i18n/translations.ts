@@ -784,6 +784,8 @@ export const SL: Record<string, string> = {
   'Issue date': 'Datum izdaje',
   'Expiry date': 'Datum veljavnosti',
   Expires: 'Poteče',
+  'Expiring soon': 'Poteče',
+  'No expiry': 'brez roka',
   'expires today': 'poteče danes',
   expired: 'poteklo',
   in: 'čez',
@@ -793,8 +795,9 @@ export const SL: Record<string, string> = {
   'No documents on file yet. Add the vessel’s registration, permis de navigation, insurance and more.':
     'Ni še dokumentov. Dodajte registracijo plovila, dovoljenje za plovbo (permis de navigation), zavarovanje in ostalo.',
   'No document on file': 'Dokumenta ni v evidenci',
-  'No documents expiring in the next 30 days.':
-    'V naslednjih 30 dneh ne poteče noben dokument.',
+  'No documents expiring in the next 60 days.':
+    'V naslednjih 60 dneh ne poteče noben dokument.',
+  'Other documents': 'Drugi dokumenti',
   'Archive this document? It stays on file for history. Reason (optional):':
     'Arhiviram ta dokument? Ostane v evidenci zaradi zgodovine. Razlog (neobvezno):',
   'Archived documents': 'Arhivirani dokumenti',
@@ -835,14 +838,38 @@ export const SL: Record<string, string> = {
   Missing: 'Manjka',
   Pending: 'V obdelavi',
 
-  // Slovenian label shown beside the stored official title.
+  // Primary document title in Slovenian. The filed French name stays underneath.
   'Navigation permit': 'Dovoljenje za plovbo',
   'Crew list': 'Seznam posadke',
   'Departure clearance': 'Dovoljenje za odhod',
   'Visit report': 'Poročilo o pregledu',
-  'International freeboard certificate': 'Mednarodno potrdilo o prostem boku',
+  'Freeboard certificate': 'Potrdilo o prostošnini',
+  'APMF naturalisation cover': 'Spremni dopis APMF (akt o naturalizaciji)',
+  'Malagasy vessel naturalisation': 'Akt o naturalizaciji malgaškega plovila št. 25.100',
   'Naturalisation deed': 'Akt o naturalizaciji',
   'Insurance certificate': 'Potrdilo o zavarovanju',
-  'Skipper competency certificate': 'Potrdilo o usposobljenosti skiperja',
+  'Skipper competency certificate': 'Potrdilo o usposobljenosti',
   Photograph: 'Fotografija',
+
+  // Filed notes on the Odyssey II register, shown in Slovenian when SL is on.
+  "Policyholder: MR SCHNEIDER MICHAEL, ANDREKAREKA NOSY KOMBA, 207 NOSY BE. Vessel: ODYSSEY II – HV 25 111. Type: EMBARCATION DE PLAISANCE. RC Passagers. Dommages Matériels up to 30,000,000 Ar; Dommages Corporels up to 50,000,000 Ar; 5 passengers. Signed Nosy Be, 13 April 2026.":
+    'Zavarovanec: MR SCHNEIDER MICHAEL, ANDREKAREKA NOSY KOMBA, 207 NOSY BE. Plovilo: ODYSSEY II – HV 25 111. Vrsta: EMBARCATION DE PLAISANCE. RC Passagers. Premoženjska škoda do 30.000.000 Ar; telesna škoda do 50.000.000 Ar; 5 potnikov. Podpisano Nosy Be, 13. april 2026.',
+  "Cover letter transmitting the Acte de naturalisation (PJ 01). This scan is the cover letter, not the act itself. To: Monsieur SCHNEIDER Michael, Andrakaveka Be, Ampangorina, NOSY BE. Subject: Vedette ODYSSEY II, immatriculation HV-25.111 / Demande d'acte de naturalisation. Ref: lettre du 13/11/2025; documents reçus le 02/12/2025. Signed Antananarivo, 23 December 2025, Maurice Tianjara, Directeur Général p.i. Copie à: M. le DR APMF – NOSY BE.":
+    'Spremni dopis, ki pošilja akt o naturalizaciji (PJ 01). Ta sken je spremni dopis, ne sam akt. Za: Monsieur SCHNEIDER Michael, Andrakaveka Be, Ampangorina, NOSY BE. Zadeva: vedeta ODYSSEY II, registracija HV-25.111 / Demande d\'acte de naturalisation. Sklic: lettre du 13/11/2025; documents reçus le 02/12/2025. Podpisano Antananarivo, 23. december 2025, Maurice Tianjara, Directeur Général p.i. Kopija: M. le DR APMF – NOSY BE.',
+  'Acte de naturalisation for vedette ODYSSEY II. Bilingual French and Malagasy (FR+MG). Issued by Agence Portuaire, Maritime et Fluviale (APMF). Port of registry: HELL VILLE. Registration HV-25.111 dated 08/12/2025. Naturalization register 25.100 dated 02/12/2025. Built 2024, Afrique du Sud, fibre de verre, 60 CV. Issued Antananarivo, stamp 23 DEC 2025, Maurice Tianjara, par délégation.':
+    'Akt o naturalizaciji vedete ODYSSEY II. Dvojezično francosko in malgaško (FR+MG). Izdala Agence Portuaire, Maritime et Fluviale (APMF). Pristanišče vpisa: HELL VILLE. Registracija HV-25.111 z dne 08/12/2025. Register naturalizacije 25.100 z dne 02/12/2025. Zgrajena 2024, Afrique du Sud, fibre de verre, 60 CV. Izdano Antananarivo, žig 23. DEC 2025, Maurice Tianjara, par délégation.',
+  "Acte de naturalisation d'un navire malgache for vedette ODYSSEY II. Bilingual French and Malagasy (FR+MG). Number 25.100. This scan is the act itself, distinct from the APMF cover letter and from registration HV-25.111. Owner: Monsieur SCHNEIDER Michael, Andrakaveka Be, Ampangorina, NOSY BE. Jauge brute 1.48 t, jauge nette 1.28 t (Jaugeage 1969). Stamp PLAISANCE. Length 4 m 70, beam 1 m 90.":
+    'Akt o naturalizaciji malgaškega plovila za vedeto ODYSSEY II. Dvojezično francosko in malgaško (FR+MG). Številka 25.100. Ta sken je sam akt, ločen od spremnega dopisa APMF in od registracije HV-25.111. Lastnik: Monsieur SCHNEIDER Michael, Andrakaveka Be, Ampangorina, NOSY BE. Bruto tonaža 1,48 t, neto tonaža 1,28 t (Jaugeage 1969). Žig PLAISANCE. Dolžina 4 m 70, širina 1 m 90.',
+  'Permis de navigation de la Marine Marchande for vedette ODYSSEY II. Registration HV 25.111, Nosy Be. Navigation zone: littorale. Crew 1, passengers 5. Propulsion 1×60CV Suzuki. Jauge brute 01.48 Tx. Owner: Monsieur Schneider Michael (request 13 Nov 2025). Visit 11 Dec 2025. Issued Nosy Be 15 Dec 2025, valid until 10 Dec 2026. Signed Rabialahy Jean Paul. Nota: this document is not a title of ownership.':
+    'Dovoljenje za plovbo trgovske mornarice za vedeto ODYSSEY II. Registracija HV 25.111, Nosy Be. Območje plovbe: obalno (littorale). Posadka 1, potniki 5. Pogon 1×60CV Suzuki. Bruto tonaža 01.48 Tx. Lastnik: Monsieur Schneider Michael (vloga 13. nov. 2025). Pregled 11. dec. 2025. Izdano Nosy Be 15. dec. 2025, velja do 10. dec. 2026. Podpisal Rabialahy Jean Paul. Opomba: ta dokument ni lastninski naslov.',
+  'Page 1 of the APMF Nosy Be rapport de visite, 11 Dec 2025, visite de mise en service. Vedette ODYSSEY II, HV 25.111. Owner Schneider. Hull 4.70×1.90 m, polyester, built 2024 South Africa. Plaisance, 5 passengers, navigation littorale. Skipper Behamby William. Insurance line on the form said “à souscrire” (the later A.R.O. policy is filed separately).':
+    'Stran 1 poročila o pregledu APMF Nosy Be, 11. dec. 2025, začetni pregled (visite de mise en service). Vedeta ODYSSEY II, HV 25.111. Lastnik Schneider. Trup 4,70×1,90 m, poliester, zgrajen 2024 v Južni Afriki. Plovilo za prosti čas, 5 potnikov, obalna plovba. Skiper Behamby William. Vrstica za zavarovanje na obrazcu pravi »à souscrire« (pozneje sklenjena polica A.R.O. je vložena posebej).',
+  'Page 2 of the APMF Nosy Be rapport de visite, 11 Dec 2025. Propulsion: 1×60CV Suzuki outboard. Safety gear: powder extinguisher expiring July 2026; 6 adult lifejackets. Conclusion: fit to navigate Madagascar territorial waters. Permis valid until 10 Dec 2026. Signed Rabialahy Jean Paul, Inspecteur des Affaires Maritimes.':
+    'Stran 2 poročila o pregledu APMF Nosy Be, 11. dec. 2025. Pogon: 1×60CV Suzuki izvenkrmni motor. Varnostna oprema: prašni gasilnik poteče julija 2026; 6 rešilnih jopičev za odrasle. Sklep: sposobno za plovbo v teritorialnih vodah Madagaskarja. Dovoljenje za plovbo velja do 10. dec. 2026. Podpisal Rabialahy Jean Paul, Inspecteur des Affaires Maritimes.',
+  'Certificat international de franc-bord (1966), n° 625-FB/HV. Vessel ODYSSEY II, port of registry Nosy-Be, length 4.43 m. Type B, existing ship (navire existant). Survey November 2025. Issued Nosy-Be 11 Nov 2025, valid until 24 Nov 2026. Signed Rabialahy Jean Paul.':
+    'Potrdilo o prostošnini (1966), št. 625-FB/HV. Plovilo ODYSSEY II, pristanišče vpisa Nosy-Be, dolžina 4,43 m. Tip B, obstoječe plovilo (navire existant). Pregled november 2025. Izdano Nosy-Be 11. nov. 2025, velja do 24. nov. 2026. Podpisal Rabialahy Jean Paul.',
+  'Person document, not a vessel title. Filed on the ODYSSEY II register as owner/skipper competency. Republic of South Africa Certificate of Competency. Holder: MICHAEL SCHNEIDER. Certificate SVC-0017212-S. ID 7409305248086. Coastal Skipper limited to 40 nautical miles. Category B vessel under 9 m. Test 20 Aug 2014 (SADSAA). Dated Pretoria 28 Jan 2015.':
+    'Osebni dokument, ne listina plovila. V registru ODYSSEY II je vložen kot usposobljenost lastnika/skiperja. Potrdilo o usposobljenosti Republike Južna Afrika. Imetnik: MICHAEL SCHNEIDER. Potrdilo SVC-0017212-S. ID 7409305248086. Obalni skiper do 40 navtičnih milj. Plovilo kategorije B pod 9 m. Preizkus 20. avg. 2014 (SADSAA). Datum Pretoria 28. jan. 2015.',
+  'Photograph of ODYSSEY II on a trailer, registration HV 25-111 painted on the hull. Stored upright. The vessel compliance profile has no photo field, so the picture is filed here.':
+    'Fotografija plovila ODYSSEY II na prikolici, registracija HV 25-111 je napisana na trupu. Shranjena pokončno. Profil skladnosti plovila nima polja za fotografijo, zato je slika vložena tukaj.',
 }
