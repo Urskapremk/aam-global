@@ -783,7 +783,7 @@ export const SL: Record<string, string> = {
   'Issuing authority': 'Izdajatelj',
   'Issue date': 'Datum izdaje',
   'Expiry date': 'Datum veljavnosti',
-  Expires: 'Poteče',
+  Expires: 'Preteče',
   'Expiring soon': 'Poteče',
   'No expiry': 'brez roka',
   'expires today': 'poteče danes',

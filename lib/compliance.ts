@@ -174,9 +174,11 @@ export function expiryTone(
   return 'current'
 }
 
-// Labels Urška asked for. Soon is Poteče / Expiring soon; lapsed is Poteklo /
-// Expired. A later date still says Poteče / Expires, without the warning colour.
-// Documents with no end date say brez roka / No expiry — never an invented date.
+// Three states, plus documents with no end date (never an invented date):
+//   more than 60 days out — Preteče / Expires (calm)
+//   within 60 days — Poteče / Expiring soon (amber)
+//   past the date — Poteklo / Expired (red)
+//   no end date — brez roka / No expiry
 export function expiryNoticeLabel(
   lang: 'en' | 'sl',
   tone: ExpiryTone,
@@ -184,7 +186,8 @@ export function expiryNoticeLabel(
   if (lang === 'sl') {
     if (tone === 'none') return 'brez roka'
     if (tone === 'expired') return 'Poteklo'
-    return 'Poteče'
+    if (tone === 'soon') return 'Poteče'
+    return 'Preteče'
   }
   if (tone === 'none') return 'No expiry'
   if (tone === 'expired') return 'Expired'
