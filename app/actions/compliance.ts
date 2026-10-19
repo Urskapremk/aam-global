@@ -67,6 +67,19 @@ const ODYSSEY_II_NATURALISATION_ACT_NOTES = [
   'Issued Antananarivo, stamp 23 DEC 2025, Maurice Tianjara, par délégation.',
 ].join(' ')
 
+/** Stable id so the naturalisation act numbered 25.100 is inserted once. */
+const ODYSSEY_II_NATURALISATION_25100_ID = 'doc-odyssey-ii-nat-25-100'
+const ODYSSEY_II_NATURALISATION_25100_PUBLIC =
+  '/documents/odyssey-ii-acte-naturalisation-25-100.png'
+
+const ODYSSEY_II_NATURALISATION_25100_NOTES = [
+  'Acte de naturalisation d\'un navire malgache for vedette ODYSSEY II. Bilingual French and Malagasy (FR+MG).',
+  'Number 25.100. This scan is the act itself, distinct from the APMF cover letter and from registration HV-25.111.',
+  'Owner: Monsieur SCHNEIDER Michael, Andrakaveka Be, Ampangorina, NOSY BE.',
+  'Jauge brute 1.48 t, jauge nette 1.28 t (Jaugeage 1969). Stamp PLAISANCE.',
+  'Length 4 m 70, beam 1 m 90.',
+].join(' ')
+
 /**
  * Prefer Vercel Blob when a token is present. Without one (or if the upload
  * fails) the scan stays in public/ and the row points at that path, so it
@@ -308,10 +321,78 @@ export async function ensureOdysseyIiNaturalisationAct(): Promise<void> {
   }
 }
 
+async function odysseyIiNaturalisation25100FileUrl(): Promise<string> {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return ODYSSEY_II_NATURALISATION_25100_PUBLIC
+  try {
+    const filePath = path.join(
+      process.cwd(),
+      'public',
+      'documents',
+      'odyssey-ii-acte-naturalisation-25-100.png',
+    )
+    const body = await readFile(filePath)
+    const blob = await put(
+      'aam/compliance/odyssey-ii/acte-naturalisation-25-100.png',
+      body,
+      {
+        access: 'public',
+        addRandomSuffix: false,
+        contentType: 'image/png',
+      },
+    )
+    return blob.url
+  } catch (err) {
+    console.error('Odyssey II naturalisation 25.100 blob upload failed:', err)
+    return ODYSSEY_II_NATURALISATION_25100_PUBLIC
+  }
+}
+
+/**
+ * File the Acte de naturalisation d'un navire malgache for ODYSSEY II (n° 25.100).
+ * Not insurance. Idempotent on a stable id, and does not touch the cover or HV-25.111 rows.
+ */
+export async function ensureOdysseyIiNaturalisation25100(): Promise<void> {
+  await requireAdmin()
+  try {
+    const [existing] = await db
+      .select({ id: complianceDocuments.id })
+      .from(complianceDocuments)
+      .where(eq(complianceDocuments.id, ODYSSEY_II_NATURALISATION_25100_ID))
+      .limit(1)
+    if (existing) return
+    const fileUrl = await odysseyIiNaturalisation25100FileUrl()
+    await db.insert(complianceDocuments).values({
+      id: ODYSSEY_II_NATURALISATION_25100_ID,
+      boat: 'odyssey-ii',
+      category: 'registration',
+      name: 'Acte de naturalisation — navire malgache n° 25.100',
+      number: '25.100',
+      issuingAuthority: 'République de Madagascar',
+      fileUrl,
+      status: 'valid',
+      notes: ODYSSEY_II_NATURALISATION_25100_NOTES,
+      createdBy: 'Urška',
+    })
+    await db.insert(complianceAudit).values({
+      id: newId('aud'),
+      recordType: 'document',
+      recordId: ODYSSEY_II_NATURALISATION_25100_ID,
+      action: 'create',
+      newValue: 'Acte de naturalisation — navire malgache n° 25.100',
+      reason:
+        'Filed from the Acte de naturalisation d\'un navire malgache n° 25.100 (stamp PLAISANCE).',
+      userName: 'Urška',
+    })
+  } catch (err) {
+    console.error('Could not file Odyssey II naturalisation 25.100:', err)
+  }
+}
+
 async function ensureOdysseyIiFiledDocuments(): Promise<void> {
   await ensureOdysseyIiInsuranceAttestation()
   await ensureOdysseyIiNaturalisationCover()
   await ensureOdysseyIiNaturalisationAct()
+  await ensureOdysseyIiNaturalisation25100()
 }
 
 export type ComplianceDoc = {
