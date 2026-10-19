@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Plus, Pencil, Archive, X, FileText, RotateCcw } from 'lucide-react'
+import { Plus, Pencil, Archive, X, FileText, RotateCcw, ExternalLink } from 'lucide-react'
 
+import { ImageUpload } from '@/components/admin/image-upload'
 import { Button } from '@/components/ui/button'
+import { useT } from '@/lib/i18n/context'
 import {
   DOC_CATEGORIES,
   docCategoryLabel,
@@ -46,7 +48,12 @@ const emptyForm = (boat: string): DocInput => ({
   expiryDate: '',
   status: 'valid',
   notes: '',
+  fileUrl: '',
 })
+
+function isImageUrl(url: string): boolean {
+  return /\.(png|jpe?g|webp|gif|avif)(\?|#|$)/i.test(url)
+}
 
 const field =
   'w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring'
@@ -62,6 +69,7 @@ export function DocumentRegister({
   live: ComplianceDoc[]
   archived: ComplianceDoc[]
 }) {
+  const t = useT()
   const [form, setForm] = useState<DocInput | null>(null)
   const [showArchived, setShowArchived] = useState(false)
   const [pending, startTransition] = useTransition()
@@ -77,6 +85,7 @@ export function DocumentRegister({
       issuingAuthority: d.issuingAuthority ?? '',
       issueDate: d.issueDate ?? '',
       expiryDate: d.expiryDate ?? '',
+      fileUrl: d.fileUrl ?? '',
       status: d.status,
       notes: d.notes ?? '',
     })
@@ -205,9 +214,24 @@ export function DocumentRegister({
                 }
               />
             </label>
+            <div className="space-y-2 sm:col-span-2">
+              <ImageUpload
+                label="Scan or screenshot"
+                listenPaste
+                maxEdge={2400}
+                quality={0.9}
+                value={form.fileUrl?.trim() ? form.fileUrl : null}
+                onChange={(url) => setForm({ ...form, fileUrl: url ?? '' })}
+              />
+              <p className="text-xs text-muted-foreground">
+                {t(
+                  'Attach a photo from your phone or paste a screenshot. It is saved with this vessel document.',
+                )}
+              </p>
+            </div>
             <label className="space-y-1.5 text-sm sm:col-span-2">
               <span className="text-muted-foreground">
-                Document link (optional)
+                {t('Document link (optional)')}
               </span>
               <input
                 className={field}
@@ -275,6 +299,27 @@ export function DocumentRegister({
                 )}
                 {d.notes && <p className="italic">{d.notes}</p>}
               </div>
+              {d.fileUrl && (
+                <a
+                  href={d.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex max-w-full flex-col gap-2 text-sm text-foreground underline-offset-2 hover:underline"
+                >
+                  {isImageUrl(d.fileUrl) && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={d.fileUrl}
+                      alt={d.name}
+                      className="h-28 w-auto max-w-full rounded-md border border-border object-contain object-left"
+                    />
+                  )}
+                  <span className="inline-flex items-center gap-1.5">
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                    {t('Open scan')}
+                  </span>
+                </a>
+              )}
             </div>
             <div className="flex items-center gap-1">
               <button

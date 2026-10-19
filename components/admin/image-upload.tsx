@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useId } from 'react'
 import { Upload, X, Loader2, ClipboardPaste } from 'lucide-react'
 import { uploadImage } from '@/app/actions/upload'
+import { useT } from '@/lib/i18n/context'
 import { shrinkImageToDataUrl, dataUrlToFile } from '@/lib/image-client'
 
 function imageFromClipboardData(data: DataTransfer | null): File | null {
@@ -39,13 +40,19 @@ export function ImageUpload({
   onChange,
   label = 'Image',
   listenPaste = false,
+  maxEdge = 1920,
+  quality = 0.85,
 }: {
   value: string | null
   onChange: (url: string | null) => void
   label?: string
+  /** Longest edge in pixels before the JPEG is sent. Document scans want more. */
+  maxEdge?: number
+  quality?: number
   /** Also accept Ctrl/Cmd+V anywhere on the page while this field is mounted. */
   listenPaste?: boolean
 }) {
+  const t = useT()
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -63,7 +70,7 @@ export function ImageUpload({
       let toSend = file
       if (!/image\/(gif|svg)/.test(file.type)) {
         try {
-          const dataUrl = await shrinkImageToDataUrl(file, 1920, 0.85)
+          const dataUrl = await shrinkImageToDataUrl(file, maxEdge, quality)
           toSend = dataUrlToFile(dataUrl, `${file.name.replace(/\.[^.]+$/, '')}.jpg`)
         } catch {
           toSend = file
@@ -76,7 +83,7 @@ export function ImageUpload({
       else if (res.url) onChange(res.url)
     } catch (err) {
       console.error('Image upload failed:', err)
-      setError('Nalaganje ni uspelo.')
+      setError(t('Upload failed.'))
     } finally {
       uploadingRef.current = false
       setUploading(false)
@@ -119,7 +126,7 @@ export function ImageUpload({
     const file = imageFromClipboardData(e.clipboardData)
     e.preventDefault()
     if (!file) {
-      setError('V odložišču ni slike. Najprej naredite posnetek zaslona.')
+      setError(t('No image in the clipboard. Take a screenshot first.'))
       return
     }
     setPasteBoxOpen(false)
@@ -167,7 +174,7 @@ export function ImageUpload({
       }}
     >
       <label className="mb-1.5 block text-sm font-medium text-foreground">
-        {label}
+        {t(label)}
       </label>
 
       <div className="flex flex-wrap items-start gap-3">
@@ -182,7 +189,7 @@ export function ImageUpload({
             <button
               type="button"
               onClick={() => onChange(null)}
-              aria-label="Remove image"
+              aria-label={t('Remove image')}
               className="absolute -right-2 -top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary text-background shadow"
             >
               <X className="h-4 w-4" />
@@ -207,12 +214,12 @@ export function ImageUpload({
             {uploading ? (
               <>
                 <Loader2 className="h-5 w-5 animate-spin" />
-                Uploading…
+                {t('Uploading…')}
               </>
             ) : (
               <>
                 <Upload className="h-5 w-5" />
-                Upload image
+                {t('Upload image')}
               </>
             )}
           </button>
@@ -225,7 +232,7 @@ export function ImageUpload({
           className="inline-flex items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2 text-sm text-foreground transition-colors hover:border-accent disabled:opacity-50"
         >
           <ClipboardPaste className="h-4 w-4" />
-          {value ? 'Replace with screenshot' : 'Paste screenshot'}
+          {value ? t('Replace with screenshot') : t('Paste screenshot')}
           <span className="text-xs text-muted-foreground">Ctrl+V</span>
         </button>
       </div>
@@ -252,8 +259,8 @@ export function ImageUpload({
               else if (!(e.ctrlKey || e.metaKey)) e.preventDefault()
             }}
             onBlur={() => setPasteBoxOpen(false)}
-            aria-label="Prilepite sliko s Ctrl+V"
-            placeholder="Kliknite sem in pritisnite Ctrl+V (Mac: Cmd+V)"
+            aria-label={t('Paste an image with Ctrl+V')}
+            placeholder={t('Click here and press Ctrl+V (Mac: Cmd+V)')}
             rows={2}
             className="w-52 resize-none rounded-lg border-2 border-dashed border-accent bg-background px-3 py-2 text-sm text-foreground caret-transparent placeholder:text-muted-foreground focus:outline-none"
           />
@@ -261,7 +268,7 @@ export function ImageUpload({
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => setPasteBoxOpen(false)}
-            aria-label="Zapri"
+            aria-label={t('Close')}
             className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground"
           >
             <X className="h-4 w-4" />

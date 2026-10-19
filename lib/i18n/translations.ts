@@ -743,4 +743,21 @@ export const SL: Record<string, string> = {
   'no fish logged on this trip': 'na tej plovbi ni zabeleženih rib',
   'Green marks the mooring, dark blue dots are fish kept and pale blue released — hover any dot for the species, weight and time. Fish caught close together sit on one another until you zoom in, and a fish logged without a position is in the log but not on the map.':
     'Zeleno označuje privez, temno modre pike so obdržane ribe in svetlo modre izpuščene — pomaknite se nad piko za vrsto, težo in čas. Ribe, ujete blizu skupaj, se prekrivajo, dokler ne povečate, riba brez zabeležene pozicije pa je v dnevniku, a ne na zemljevidu.',
+
+  // Vessel document scans
+  Image: 'Slika',
+  'Scan or screenshot': 'Sken ali posnetek zaslona',
+  'Attach a photo from your phone or paste a screenshot. It is saved with this vessel document.':
+    'Priložite fotografijo s telefona ali prilepite posnetek zaslona. Shrani se k temu dokumentu plovila.',
+  'Document link (optional)': 'Povezava do dokumenta (neobvezno)',
+  'Open scan': 'Odpri sken',
+  'Uploading…': 'Nalagam…',
+  'Upload image': 'Naloži sliko',
+  'Replace with screenshot': 'Zamenjaj s posnetkom',
+  'Remove image': 'Odstrani sliko',
+  'No image in the clipboard. Take a screenshot first.':
+    'V odložišču ni slike. Najprej naredite posnetek zaslona.',
+  'Paste an image with Ctrl+V': 'Prilepite sliko s Ctrl+V',
+  'Click here and press Ctrl+V (Mac: Cmd+V)':
+    'Kliknite sem in pritisnite Ctrl+V (Mac: Cmd+V)',
 }

@@ -2,6 +2,7 @@
 
 import { and, desc, eq, inArray } from 'drizzle-orm'
 
+import { ensureOdysseyIiInsuranceAttestation } from '@/app/actions/compliance'
 import { isAdmin } from '@/lib/admin-auth'
 import { db } from '@/lib/db'
 import {
@@ -33,6 +34,7 @@ export type InspectionDoc = {
   number: string | null
   issuingAuthority: string | null
   expiryDate: string | null
+  fileUrl: string | null
   status: ComplianceStatus
 }
 
@@ -78,6 +80,7 @@ export type InspectionView = {
  */
 export async function getInspectionView(boat: string): Promise<InspectionView> {
   await requireAdmin()
+  if (boat === 'odyssey-ii') await ensureOdysseyIiInsuranceAttestation()
 
   const [profile] = await db
     .select()
@@ -198,6 +201,7 @@ export async function getInspectionView(boat: string): Promise<InspectionView> {
       number: d.number,
       issuingAuthority: d.issuingAuthority,
       expiryDate: d.expiryDate,
+      fileUrl: d.fileUrl,
       status: effectiveStatus({ status: d.status, expiryDate: d.expiryDate }),
     })),
     lastVoyage,

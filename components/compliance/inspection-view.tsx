@@ -118,6 +118,7 @@ export function InspectionViewClient({ boat, view }: Props) {
                   <th className="py-2">Authority</th>
                   <th className="py-2">Expiry</th>
                   <th className="py-2">Status</th>
+                  <th className="py-2 print:hidden">Scan</th>
                 </tr>
               </thead>
               <tbody>
@@ -147,6 +148,20 @@ export function InspectionViewClient({ boat, view }: Props) {
                           <span className={`h-1.5 w-1.5 rounded-full ${chip.dot}`} />
                           {STATUS_LABEL[d.status]}
                         </span>
+                      </td>
+                      <td className="py-2 print:hidden">
+                        {d.fileUrl ? (
+                          <a
+                            href={d.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline underline-offset-2"
+                          >
+                            Open
+                          </a>
+                        ) : (
+                          '—'
+                        )}
                       </td>
                     </tr>
                   )
