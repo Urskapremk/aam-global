@@ -6,19 +6,38 @@ import { useCart } from '@/components/cart-context'
 import { formatEur, type Product } from '@/lib/products'
 import { ShopPriceAlt } from '@/components/shop-price'
 
+function galleryFor(product: Product): string[] {
+  const urls = [product.image, product.image2, product.image3].filter(
+    (u): u is string => Boolean(u),
+  )
+  return urls.length > 0 ? urls : ['/placeholder.svg']
+}
+
 export function ProductCard({ product }: { product: Product }) {
   const { addItem } = useCart()
-  const [showSecond, setShowSecond] = useState(false)
+  const [photoIndex, setPhotoIndex] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const titleId = useId()
 
-  const imageSrc =
-    (showSecond && product.image2) || product.image || '/placeholder.svg'
+  const gallery = galleryFor(product)
+  const imageSrc = gallery[Math.min(photoIndex, gallery.length - 1)] ?? gallery[0]
+  const hasGallery = gallery.length > 1
+
+  useEffect(() => {
+    setPhotoIndex(0)
+  }, [product.id, product.image, product.image2, product.image3])
 
   useEffect(() => {
     if (!lightboxOpen) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setLightboxOpen(false)
+      if (!hasGallery) return
+      if (e.key === 'ArrowLeft') {
+        setPhotoIndex((i) => (i - 1 + gallery.length) % gallery.length)
+      }
+      if (e.key === 'ArrowRight') {
+        setPhotoIndex((i) => (i + 1) % gallery.length)
+      }
     }
     document.addEventListener('keydown', onKey)
     const prev = document.body.style.overflow
@@ -27,7 +46,27 @@ export function ProductCard({ product }: { product: Product }) {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
     }
-  }, [lightboxOpen])
+  }, [lightboxOpen, hasGallery, gallery.length])
+
+  const dots = (
+    <div className="flex gap-1.5">
+      {gallery.map((_, i) => (
+        <button
+          key={i}
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            setPhotoIndex(i)
+          }}
+          aria-label={`Show photo ${i + 1}`}
+          aria-pressed={photoIndex === i}
+          className={`h-2 w-2 rounded-full transition-colors ${
+            photoIndex === i ? 'bg-foreground' : 'bg-foreground/30 hover:bg-foreground/60'
+          }`}
+        />
+      ))}
+    </div>
+  )
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-accent/40 hover:shadow-lg hover:shadow-primary/5">
@@ -47,23 +86,9 @@ export function ProductCard({ product }: { product: Product }) {
             <ZoomIn className="h-4 w-4" strokeWidth={1.75} aria-hidden />
           </span>
         </button>
-        {product.image2 && (
-          <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 gap-1.5 rounded-full bg-background/80 px-2 py-1.5 backdrop-blur">
-            {[false, true].map((second) => (
-              <button
-                key={String(second)}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setShowSecond(second)
-                }}
-                aria-label={second ? 'Show second photo' : 'Show first photo'}
-                aria-pressed={showSecond === second}
-                className={`h-2 w-2 rounded-full transition-colors ${
-                  showSecond === second ? 'bg-foreground' : 'bg-foreground/30 hover:bg-foreground/60'
-                }`}
-              />
-            ))}
+        {hasGallery && (
+          <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 rounded-full bg-background/80 px-2 py-1.5 backdrop-blur">
+            {dots}
           </div>
         )}
         <span className="pointer-events-none absolute left-3 top-3 z-10 rounded-full bg-background/90 px-3 py-1 text-xs font-medium tracking-wide text-muted-foreground backdrop-blur">
@@ -139,17 +164,17 @@ export function ProductCard({ product }: { product: Product }) {
               alt={product.alt}
               className="max-h-[min(80vh,720px)] w-full rounded-xl bg-secondary object-contain shadow-lg"
             />
-            {product.image2 && (
+            {hasGallery && (
               <div className="mt-4 flex gap-2">
-                {[false, true].map((second) => (
+                {gallery.map((_, i) => (
                   <button
-                    key={String(second)}
+                    key={i}
                     type="button"
-                    onClick={() => setShowSecond(second)}
-                    aria-label={second ? 'Show second photo' : 'Show first photo'}
-                    aria-pressed={showSecond === second}
+                    onClick={() => setPhotoIndex(i)}
+                    aria-label={`Show photo ${i + 1}`}
+                    aria-pressed={photoIndex === i}
                     className={`h-2.5 w-2.5 rounded-full transition-colors ${
-                      showSecond === second
+                      photoIndex === i
                         ? 'bg-background'
                         : 'bg-background/40 hover:bg-background/70'
                     }`}

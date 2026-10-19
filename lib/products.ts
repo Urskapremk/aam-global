@@ -16,8 +16,9 @@ export type Product = {
   /** Base price in Ariary */
   priceAr?: number
   image: string
-  /** Optional second photo */
+  /** Optional extra photos (up to two beyond the main image) */
   image2?: string
+  image3?: string
   alt: string
   description: string
   /** Optional: mark a few products as featured on the shop landing */
@@ -45,6 +46,7 @@ type DbProductRow = {
   priceAr?: number | null
   image: string | null
   image2?: string | null
+  image3?: string | null
   alt: string
   description: string
   featured: boolean
@@ -75,6 +77,7 @@ export function toProduct(row: DbProductRow, arPerEur?: number): Product {
     priceAr,
     image: row.image || '/placeholder.svg?height=800&width=800',
     image2: row.image2 || undefined,
+    image3: row.image3 || undefined,
     alt: row.alt || row.name,
     description: row.description,
     featured: row.featured,

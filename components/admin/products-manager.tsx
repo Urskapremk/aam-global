@@ -27,6 +27,7 @@ export type AdminProduct = {
   stock: number | null
   image: string | null
   image2: string | null
+  image3: string | null
   alt: string
   description: string
   featured: boolean
@@ -54,6 +55,7 @@ const EMPTY: Draft = {
   stock: null,
   image: null,
   image2: null,
+  image3: null,
   alt: '',
   description: '',
   featured: false,
@@ -96,6 +98,7 @@ export function ProductsManager({
         marginPct: Number(draft.marginPct) || 0,
         image: draft.image,
         image2: draft.image2 ?? null,
+        image3: draft.image3 ?? null,
         alt: draft.alt || draft.name.trim(),
         description: draft.description,
         featured: draft.featured,
@@ -164,17 +167,29 @@ export function ProductsManager({
                 <img
                   src={p.image || '/placeholder.svg?height=300&width=400&query=product'}
                   alt={p.alt || p.name}
-  className="h-full w-full object-cover"
-  />
-  {p.image2 && (
-  // eslint-disable-next-line @next/next/no-img-element
-  <img
-  src={p.image2}
-  alt={`${p.alt || p.name} (2)`}
-  className="absolute bottom-2 right-2 h-16 w-16 rounded-md border-2 border-background object-cover shadow-md"
-  />
-  )}
-  <div className="absolute left-2 top-2 flex gap-1.5">
+                  className="h-full w-full object-cover"
+                />
+                {(p.image2 || p.image3) && (
+                  <div className="absolute bottom-2 right-2 flex gap-1.5">
+                    {p.image2 && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={p.image2}
+                        alt={`${p.alt || p.name} (2)`}
+                        className="h-14 w-14 rounded-md border-2 border-background object-cover shadow-md"
+                      />
+                    )}
+                    {p.image3 && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={p.image3}
+                        alt={`${p.alt || p.name} (3)`}
+                        className="h-14 w-14 rounded-md border-2 border-background object-cover shadow-md"
+                      />
+                    )}
+                  </div>
+                )}
+                <div className="absolute left-2 top-2 flex gap-1.5">
                   {p.featured && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-background/90 px-2 py-0.5 text-xs text-foreground">
                       <Star className="h-3 w-3 fill-accent text-accent" /> {t('Featured')}
@@ -346,18 +361,24 @@ export function ProductsManager({
                 />
               </Field>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <ImageUpload
                   value={draft.image}
                   onChange={(url) => setDraft({ ...draft, image: url })}
                   listenPaste
-                  label={t('Photo')}
+                  label={t('Main photo')}
                 />
                 <ImageUpload
                   value={draft.image2 ?? null}
                   onChange={(url) => setDraft({ ...draft, image2: url })}
                   listenPaste
-                  label={t('Second photo')}
+                  label={t('Extra photo 1')}
+                />
+                <ImageUpload
+                  value={draft.image3 ?? null}
+                  onChange={(url) => setDraft({ ...draft, image3: url })}
+                  listenPaste
+                  label={t('Extra photo 2')}
                 />
               </div>
 

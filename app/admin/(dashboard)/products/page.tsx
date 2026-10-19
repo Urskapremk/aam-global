@@ -19,6 +19,7 @@ export default async function AdminProductsPage() {
     stock: r.stock ?? null,
     image: r.image,
     image2: r.image2 ?? null,
+    image3: r.image3 ?? null,
     alt: r.alt,
     description: r.description,
     featured: r.featured,

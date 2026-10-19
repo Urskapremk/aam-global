@@ -22,7 +22,8 @@ function ensurePriceArColumn() {
          ADD COLUMN IF NOT EXISTS "customsAr" integer NOT NULL DEFAULT 0,
          ADD COLUMN IF NOT EXISTS "marginPct" double precision NOT NULL DEFAULT 0,
          ADD COLUMN IF NOT EXISTS "stock" integer,
-         ADD COLUMN IF NOT EXISTS "image2" text`,
+         ADD COLUMN IF NOT EXISTS "image2" text,
+         ADD COLUMN IF NOT EXISTS "image3" text`,
     )
     await pool.query(
       `CREATE TABLE IF NOT EXISTS shop_stock_moves (
@@ -65,6 +66,7 @@ export async function getPublishedProducts() {
       priceAr: shopProducts.priceAr,
       image: shopProducts.image,
       image2: shopProducts.image2,
+      image3: shopProducts.image3,
       alt: shopProducts.alt,
       description: shopProducts.description,
       featured: shopProducts.featured,
@@ -87,6 +89,7 @@ type ProductInput = {
   marginPct: number
   image: string | null
   image2: string | null
+  image3: string | null
   alt: string
   description: string
   featured: boolean
