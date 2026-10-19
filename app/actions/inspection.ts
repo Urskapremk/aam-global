@@ -4,6 +4,7 @@ import { and, desc, eq, inArray } from 'drizzle-orm'
 
 import {
   ensureOdysseyIiInsuranceAttestation,
+  ensureOdysseyIiNaturalisationAct,
   ensureOdysseyIiNaturalisationCover,
 } from '@/app/actions/compliance'
 import { isAdmin } from '@/lib/admin-auth'
@@ -86,6 +87,7 @@ export async function getInspectionView(boat: string): Promise<InspectionView> {
   if (boat === 'odyssey-ii') {
     await ensureOdysseyIiInsuranceAttestation()
     await ensureOdysseyIiNaturalisationCover()
+    await ensureOdysseyIiNaturalisationAct()
   }
 
   const [profile] = await db
