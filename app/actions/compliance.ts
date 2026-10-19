@@ -39,6 +39,20 @@ const ODYSSEY_II_INSURANCE_NOTES = [
   'Signed Nosy Be, 13 April 2026.',
 ].join(' ')
 
+/** Stable id so the APMF naturalisation cover is inserted once. */
+const ODYSSEY_II_NATURALISATION_ID = 'doc-odyssey-ii-apmf-1029'
+const ODYSSEY_II_NATURALISATION_PUBLIC =
+  '/documents/odyssey-ii-acte-naturalisation-cover.png'
+
+const ODYSSEY_II_NATURALISATION_NOTES = [
+  'Cover letter transmitting the Acte de naturalisation (PJ 01). This scan is the cover letter, not the act itself.',
+  'To: Monsieur SCHNEIDER Michael, Andrakaveka Be, Ampangorina, NOSY BE.',
+  'Subject: Vedette ODYSSEY II, immatriculation HV-25.111 / Demande d\'acte de naturalisation.',
+  'Ref: lettre du 13/11/2025; documents reçus le 02/12/2025.',
+  'Signed Antananarivo, 23 December 2025, Maurice Tianjara, Directeur Général p.i.',
+  'Copie à: M. le DR APMF – NOSY BE.',
+].join(' ')
+
 /**
  * Prefer Vercel Blob when a token is present. Without one (or if the upload
  * fails) the scan stays in public/ and the row points at that path, so it
@@ -142,6 +156,80 @@ export async function ensureOdysseyIiInsuranceAttestation(): Promise<void> {
   }
 }
 
+async function odysseyIiNaturalisationFileUrl(): Promise<string> {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return ODYSSEY_II_NATURALISATION_PUBLIC
+  try {
+    const filePath = path.join(
+      process.cwd(),
+      'public',
+      'documents',
+      'odyssey-ii-acte-naturalisation-cover.png',
+    )
+    const body = await readFile(filePath)
+    const blob = await put(
+      'aam/compliance/odyssey-ii/acte-naturalisation-cover-1029.png',
+      body,
+      {
+        access: 'public',
+        addRandomSuffix: false,
+        contentType: 'image/png',
+      },
+    )
+    return blob.url
+  } catch (err) {
+    console.error('Odyssey II naturalisation blob upload failed:', err)
+    return ODYSSEY_II_NATURALISATION_PUBLIC
+  }
+}
+
+/**
+ * File the APMF cover letter that transmits the Acte de naturalisation for
+ * ODYSSEY II (HV-25.111). Not insurance. Idempotent on a stable id.
+ */
+export async function ensureOdysseyIiNaturalisationCover(): Promise<void> {
+  await requireAdmin()
+  try {
+    const [existing] = await db
+      .select({ id: complianceDocuments.id })
+      .from(complianceDocuments)
+      .where(eq(complianceDocuments.id, ODYSSEY_II_NATURALISATION_ID))
+      .limit(1)
+    if (existing) return
+    const fileUrl = await odysseyIiNaturalisationFileUrl()
+    await db.insert(complianceDocuments).values({
+      id: ODYSSEY_II_NATURALISATION_ID,
+      boat: 'odyssey-ii',
+      category: 'registration',
+      name: 'Acte de naturalisation — APMF cover (HV-25.111)',
+      number: '1029-APMF/DG/DAP/SGAN.25',
+      issuingAuthority:
+        'Agence Portuaire, Maritime et Fluviale (APMF), Antananarivo',
+      issueDate: '2025-12-23',
+      fileUrl,
+      status: 'valid',
+      notes: ODYSSEY_II_NATURALISATION_NOTES,
+      createdBy: 'Urška',
+    })
+    await db.insert(complianceAudit).values({
+      id: newId('aud'),
+      recordType: 'document',
+      recordId: ODYSSEY_II_NATURALISATION_ID,
+      action: 'create',
+      newValue: 'Acte de naturalisation — APMF cover (HV-25.111)',
+      reason:
+        'Filed from the APMF cover letter N° 1029-APMF/DG/DAP/SGAN.25 (23 Dec 2025).',
+      userName: 'Urška',
+    })
+  } catch (err) {
+    console.error('Could not file Odyssey II naturalisation cover:', err)
+  }
+}
+
+async function ensureOdysseyIiFiledDocuments(): Promise<void> {
+  await ensureOdysseyIiInsuranceAttestation()
+  await ensureOdysseyIiNaturalisationCover()
+}
+
 export type ComplianceDoc = {
   id: string
   boat: string
@@ -213,7 +301,7 @@ export async function getComplianceOverview(): Promise<{
   alerts: ExpiryAlert[]
 }> {
   await requireAdmin()
-  await ensureOdysseyIiInsuranceAttestation()
+  await ensureOdysseyIiFiledDocuments()
 
   const [profiles, docs] = await Promise.all([
     db.select().from(vesselComplianceProfiles),
@@ -452,7 +540,7 @@ export async function getVesselDocuments(boat: string): Promise<{
   archived: ComplianceDoc[]
 }> {
   await requireAdmin()
-  if (boat === 'odyssey-ii') await ensureOdysseyIiInsuranceAttestation()
+  if (boat === 'odyssey-ii') await ensureOdysseyIiFiledDocuments()
   const rows = await db
     .select()
     .from(complianceDocuments)

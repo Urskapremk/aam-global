@@ -2,7 +2,10 @@
 
 import { and, desc, eq, inArray } from 'drizzle-orm'
 
-import { ensureOdysseyIiInsuranceAttestation } from '@/app/actions/compliance'
+import {
+  ensureOdysseyIiInsuranceAttestation,
+  ensureOdysseyIiNaturalisationCover,
+} from '@/app/actions/compliance'
 import { isAdmin } from '@/lib/admin-auth'
 import { db } from '@/lib/db'
 import {
@@ -80,7 +83,10 @@ export type InspectionView = {
  */
 export async function getInspectionView(boat: string): Promise<InspectionView> {
   await requireAdmin()
-  if (boat === 'odyssey-ii') await ensureOdysseyIiInsuranceAttestation()
+  if (boat === 'odyssey-ii') {
+    await ensureOdysseyIiInsuranceAttestation()
+    await ensureOdysseyIiNaturalisationCover()
+  }
 
   const [profile] = await db
     .select()
