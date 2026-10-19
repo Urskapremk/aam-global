@@ -148,6 +148,52 @@ export function expiryPhrase(dateStr: string | null | undefined): string | null 
   return `in ${days} day${days === 1 ? '' : 's'}`
 }
 
+// English gloss used as the i18n source key. The stored title stays French
+// (or whatever was filed). Slovenian is the dictionary value for this key.
+const DOC_TITLE_GLOSS: { test: RegExp; key: string }[] = [
+  { test: /^permis de navigation\b/i, key: 'Navigation permit' },
+  { test: /^rôle d['’]équipage\b/i, key: 'Crew list' },
+  { test: /^role d['’]equipage\b/i, key: 'Crew list' },
+  { test: /^bon de partance\b/i, key: 'Departure clearance' },
+  { test: /^rapport de visite\b/i, key: 'Visit report' },
+  { test: /^certificat international de franc-bord\b/i, key: 'International freeboard certificate' },
+  { test: /^acte de naturalisation\b/i, key: 'Naturalisation deed' },
+  { test: /^attestation d['’]assurance\b/i, key: 'Insurance certificate' },
+  { test: /^skipper certificate\b/i, key: 'Skipper competency certificate' },
+  { test: /^photo\b/i, key: 'Photograph' },
+]
+
+export function docTitleGlossKey(name: string): string | null {
+  const n = name.trim()
+  return DOC_TITLE_GLOSS.find((r) => r.test.test(n))?.key ?? null
+}
+
+// "Expires 2026-12-10 · in 21 days", in the active admin language.
+// Slovenian day forms are fixed here because the dictionary has no placeholders.
+export function formatExpiryLine(
+  t: (s: string) => string,
+  date: string,
+  days: number | null,
+): string {
+  const head = `${t('Expires')} ${date}`
+  if (days == null) return head
+  if (days === 0) return `${head} · ${t('expires today')}`
+  const n = Math.abs(days)
+  const sl = t('days') === 'dni'
+  if (days < 0) {
+    if (sl) {
+      const unit = n === 1 ? 'dnem' : n === 2 ? 'dnevoma' : 'dnevi'
+      return `${head} · pred ${n} ${unit}`
+    }
+    return `${head} · ${t('expired')} ${n} ${n === 1 ? t('day') : t('days')} ${t('ago')}`
+  }
+  if (sl) {
+    const unit = n === 1 ? 'dan' : n === 2 ? 'dneva' : 'dni'
+    return `${head} · čez ${n} ${unit}`
+  }
+  return `${head} · ${t('in')} ${n} ${n === 1 ? t('day') : t('days')}`
+}
+
 // --- Journal de bord (voyage logbook) --------------------------------------
 
 // Voyage purpose. Maps the operational `trips.purpose` onto the regulatory

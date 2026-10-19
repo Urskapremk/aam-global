@@ -760,4 +760,89 @@ export const SL: Record<string, string> = {
   'Paste an image with Ctrl+V': 'Prilepite sliko s Ctrl+V',
   'Click here and press Ctrl+V (Mac: Cmd+V)':
     'Kliknite sem in pritisnite Ctrl+V (Mac: Cmd+V)',
+  Preview: 'Predogled',
+
+  // --- Compliance & vessel document register ---
+  'Compliance & logbooks': 'Skladnost in dnevniki',
+  'Maritime & Fisheries Compliance': 'Pomorska in ribiška skladnost',
+  'Official and internal records for ODYSSEY and ODYSSEY II — documents, logbooks and reporting':
+    'Uradni in notranji zapisi za ODYSSEY in ODYSSEY II — dokumenti, dnevniki in poročanje',
+  'Back to compliance': 'Nazaj na skladnost',
+  'Document register': 'Register dokumentov',
+  'Add document': 'Dodaj dokument',
+  'New document': 'Nov dokument',
+  'Amend document': 'Popravi dokument',
+  Amend: 'Popravi',
+  'Archive document': 'Arhiviraj dokument',
+  'Amending an official document records every change (old and new value) in the audit trail.':
+    'Popravek uradnega dokumenta zapiše vsako spremembo (staro in novo vrednost) v revizijsko sled.',
+  'Document name': 'Ime dokumenta',
+  'e.g. Permis de navigation': 'npr. Permis de navigation',
+  'Number / reference': 'Številka / referenca',
+  'No.': 'Št.',
+  'Issuing authority': 'Izdajatelj',
+  'Issue date': 'Datum izdaje',
+  'Expiry date': 'Datum veljavnosti',
+  Expires: 'Poteče',
+  'expires today': 'poteče danes',
+  expired: 'poteklo',
+  in: 'čez',
+  day: 'dan',
+  ago: 'nazaj',
+  'Save changes': 'Shrani spremembe',
+  'No documents on file yet. Add the vessel’s registration, permis de navigation, insurance and more.':
+    'Ni še dokumentov. Dodajte registracijo plovila, dovoljenje za plovbo (permis de navigation), zavarovanje in ostalo.',
+  'No document on file': 'Dokumenta ni v evidenci',
+  'No documents expiring in the next 30 days.':
+    'V naslednjih 30 dneh ne poteče noben dokument.',
+  'Archive this document? It stays on file for history. Reason (optional):':
+    'Arhiviram ta dokument? Ostane v evidenci zaradi zgodovine. Razlog (neobvezno):',
+  'Archived documents': 'Arhivirani dokumenti',
+  'Journal de bord': 'Ladijski dnevnik (Journal de bord)',
+  'Ship / voyage logbook — one entry per trip':
+    'Ladijski dnevnik plovbe — en vnos na plovbo',
+  'Journal de pêche': 'Ribiški dnevnik (Journal de pêche)',
+  'Fishing logbook — activity, catches & declarations':
+    'Ribiški dnevnik — dejavnost, ulov in prijave',
+  'Safety & departure': 'Varnost in odhod',
+  'Pre-departure check, safety equipment & incidents':
+    'Preverjanje pred odhodom, varnostna oprema in incidenti',
+  'Inspection view': 'Pogled za inšpekcijo',
+  'Print-ready compliance package for a control officer — documents, logbooks, catches, safety & legal references':
+    'Paket za tisk za nadzornika — dokumenti, dnevniki, ulov, varnost in pravne podlage',
+  'AMM Compliance Record': 'Zapis skladnosti AMM',
+  'Prepared for compliance and reporting purposes.':
+    'Pripravljeno za skladnost in poročanje.',
+  'This electronic record does not replace the official physical logbook on board, nor a submission to or validation by the competent Malagasy authority. Official acceptance is subject to the requirements of that authority.':
+    'Ta elektronski zapis ne nadomešča uradnega fizičnega dnevnika na krovu niti predložitve ali potrditve pristojnega malgaškega organa. Uradna veljavnost je odvisna od zahtev tega organa.',
+
+  // Document categories. French certificate names stay visible beside the Slovenian label.
+  Registration: 'Registracija',
+  'Permis de navigation': 'Dovoljenje za plovbo (Permis de navigation)',
+  "Rôle d'équipage": "Seznam posadke (Rôle d'équipage)",
+  'Bon de partance': 'Dovoljenje za odhod (Bon de partance)',
+  'Fishing licence': 'Ribiška licenca',
+  'Fishing authorization': 'Ribiško dovoljenje',
+  Insurance: 'Zavarovanje',
+  'Safety inspection': 'Varnostni pregled',
+  'Radio licence': 'Radijska licenca',
+  'Captain licence': 'Licenca kapitana',
+
+  // Status chips on the register and the vessel list.
+  Valid: 'Veljavno',
+  Expiring: 'Kmalu poteče',
+  Suspended: 'Začasno ustavljeno',
+  Missing: 'Manjka',
+  Pending: 'V obdelavi',
+
+  // Slovenian label shown beside the stored official title.
+  'Navigation permit': 'Dovoljenje za plovbo',
+  'Crew list': 'Seznam posadke',
+  'Departure clearance': 'Dovoljenje za odhod',
+  'Visit report': 'Poročilo o pregledu',
+  'International freeboard certificate': 'Mednarodno potrdilo o prostem boku',
+  'Naturalisation deed': 'Akt o naturalizaciji',
+  'Insurance certificate': 'Potrdilo o zavarovanju',
+  'Skipper competency certificate': 'Potrdilo o usposobljenosti skiperja',
+  Photograph: 'Fotografija',
 }

@@ -9,6 +9,8 @@ import { useT } from '@/lib/i18n/context'
 import {
   DOC_CATEGORIES,
   docCategoryLabel,
+  docTitleGlossKey,
+  formatExpiryLine,
   STATUS_LABEL,
   type ComplianceStatus,
 } from '@/lib/compliance'
@@ -28,13 +30,28 @@ const STATUS_STYLES: Record<ComplianceStatus, string> = {
 }
 
 function StatusBadge({ status }: { status: ComplianceStatus }) {
+  const t = useT()
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] ${STATUS_STYLES[status]}`}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />
-      {STATUS_LABEL[status]}
+      {t(STATUS_LABEL[status])}
     </span>
+  )
+}
+
+function OfficialTitle({ name }: { name: string }) {
+  const t = useT()
+  const key = docTitleGlossKey(name)
+  if (!key) return <>{name}</>
+  const gloss = t(key)
+  if (gloss === key) return <>{name}</>
+  return (
+    <>
+      {gloss}
+      <span className="font-normal text-muted-foreground"> · {name}</span>
+    </>
   )
 }
 
@@ -100,7 +117,7 @@ export function DocumentRegister({
 
   const archive = (d: ComplianceDoc) => {
     const reason = window.prompt(
-      `Archive "${d.name}"? It stays on file for history. Reason (optional):`,
+      `${t('Archive this document? It stays on file for history. Reason (optional):')}\n${d.name}`,
     )
     if (reason === null) return
     startTransition(async () => {
@@ -113,14 +130,14 @@ export function DocumentRegister({
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-            Document register
+            {t('Document register')}
           </p>
           <h2 className="font-serif text-2xl text-foreground">{boatName}</h2>
         </div>
         {!form && (
           <Button onClick={openNew} className="gap-2">
             <Plus className="h-4 w-4" />
-            Add document
+            {t('Add document')}
           </Button>
         )}
       </div>
@@ -129,13 +146,13 @@ export function DocumentRegister({
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="font-serif text-lg text-foreground">
-              {form.id ? 'Amend document' : 'New document'}
+              {form.id ? t('Amend document') : t('New document')}
             </h3>
             <button
               type="button"
               onClick={() => setForm(null)}
               className="rounded-md p-1 text-muted-foreground hover:bg-muted"
-              aria-label="Close"
+              aria-label={t('Close')}
             >
               <X className="h-4 w-4" />
             </button>
@@ -143,14 +160,15 @@ export function DocumentRegister({
 
           {form.id && (
             <p className="mb-4 rounded-lg border border-[#8f6d3a]/25 bg-[#8f6d3a]/8 px-3 py-2 text-xs text-[#7d5f31]">
-              Amending an official document records every change (old and new
-              value) in the audit trail.
+              {t(
+                'Amending an official document records every change (old and new value) in the audit trail.',
+              )}
             </p>
           )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="space-y-1.5 text-sm">
-              <span className="text-muted-foreground">Category</span>
+              <span className="text-muted-foreground">{t('Category')}</span>
               <select
                 className={field}
                 value={form.category}
@@ -160,22 +178,22 @@ export function DocumentRegister({
               >
                 {DOC_CATEGORIES.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.label}
+                    {t(c.label)}
                   </option>
                 ))}
               </select>
             </label>
             <label className="space-y-1.5 text-sm">
-              <span className="text-muted-foreground">Document name</span>
+              <span className="text-muted-foreground">{t('Document name')}</span>
               <input
                 className={field}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g. Permis de navigation"
+                placeholder={t('e.g. Permis de navigation')}
               />
             </label>
             <label className="space-y-1.5 text-sm">
-              <span className="text-muted-foreground">Number / reference</span>
+              <span className="text-muted-foreground">{t('Number / reference')}</span>
               <input
                 className={field}
                 value={form.number ?? ''}
@@ -183,7 +201,7 @@ export function DocumentRegister({
               />
             </label>
             <label className="space-y-1.5 text-sm">
-              <span className="text-muted-foreground">Issuing authority</span>
+              <span className="text-muted-foreground">{t('Issuing authority')}</span>
               <input
                 className={field}
                 value={form.issuingAuthority ?? ''}
@@ -193,7 +211,7 @@ export function DocumentRegister({
               />
             </label>
             <label className="space-y-1.5 text-sm">
-              <span className="text-muted-foreground">Issue date</span>
+              <span className="text-muted-foreground">{t('Issue date')}</span>
               <input
                 type="date"
                 className={field}
@@ -204,7 +222,7 @@ export function DocumentRegister({
               />
             </label>
             <label className="space-y-1.5 text-sm">
-              <span className="text-muted-foreground">Expiry date</span>
+              <span className="text-muted-foreground">{t('Expiry date')}</span>
               <input
                 type="date"
                 className={field}
@@ -241,7 +259,7 @@ export function DocumentRegister({
               />
             </label>
             <label className="space-y-1.5 text-sm sm:col-span-2">
-              <span className="text-muted-foreground">Notes</span>
+              <span className="text-muted-foreground">{t('Notes')}</span>
               <textarea
                 className={field}
                 rows={2}
@@ -253,10 +271,10 @@ export function DocumentRegister({
 
           <div className="mt-5 flex items-center gap-3">
             <Button onClick={save} disabled={pending || !form.name.trim()}>
-              {pending ? 'Saving…' : form.id ? 'Save changes' : 'Add document'}
+              {pending ? t('Saving…') : form.id ? t('Save changes') : t('Add document')}
             </Button>
             <Button variant="outline" onClick={() => setForm(null)}>
-              Cancel
+              {t('Cancel')}
             </Button>
           </div>
         </div>
@@ -265,8 +283,9 @@ export function DocumentRegister({
       <div className="space-y-3">
         {live.length === 0 && !form && (
           <p className="rounded-xl border border-dashed border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
-            No documents on file yet. Add the vessel&apos;s registration,
-            permis de navigation, insurance and more.
+            {t(
+              'No documents on file yet. Add the vessel’s registration, permis de navigation, insurance and more.',
+            )}
           </p>
         )}
         {live.map((d) => (
@@ -277,25 +296,23 @@ export function DocumentRegister({
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium text-foreground">{d.name}</span>
+                <span className="font-medium text-foreground">
+                  <OfficialTitle name={d.name} />
+                </span>
                 <StatusBadge status={d.effective} />
               </div>
               <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                {docCategoryLabel(d.category)}
+                {t(docCategoryLabel(d.category))}
               </p>
               <div className="mt-2 space-y-0.5 text-sm text-muted-foreground">
-                {d.number && <p>No. {d.number}</p>}
+                {d.number && (
+                  <p>
+                    {t('No.')} {d.number}
+                  </p>
+                )}
                 {d.issuingAuthority && <p>{d.issuingAuthority}</p>}
                 {d.expiryDate && (
-                  <p>
-                    Expires {d.expiryDate}
-                    {d.daysUntilExpiry != null &&
-                      ` · ${
-                        d.daysUntilExpiry < 0
-                          ? `${Math.abs(d.daysUntilExpiry)} days ago`
-                          : `in ${d.daysUntilExpiry} days`
-                      }`}
-                  </p>
+                  <p>{formatExpiryLine(t, d.expiryDate, d.daysUntilExpiry)}</p>
                 )}
                 {d.notes && <p className="italic">{d.notes}</p>}
               </div>
@@ -326,7 +343,7 @@ export function DocumentRegister({
                 type="button"
                 onClick={() => openEdit(d)}
                 className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label={`Amend ${d.name}`}
+                aria-label={`${t('Amend')} ${d.name}`}
               >
                 <Pencil className="h-4 w-4" />
               </button>
@@ -334,7 +351,7 @@ export function DocumentRegister({
                 type="button"
                 onClick={() => archive(d)}
                 className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label={`Archive ${d.name}`}
+                aria-label={`${t('Archive document')} ${d.name}`}
               >
                 <Archive className="h-4 w-4" />
               </button>
@@ -351,7 +368,7 @@ export function DocumentRegister({
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
           >
             <RotateCcw className="h-4 w-4" />
-            Archived documents · {archived.length}
+            {t('Archived documents')} · {archived.length}
           </button>
           {showArchived && (
             <div className="mt-3 space-y-2">
@@ -361,11 +378,11 @@ export function DocumentRegister({
                   className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 px-4 py-2.5 text-sm"
                 >
                   <span className="text-muted-foreground line-through">
-                    {d.name}
-                    {d.expiryDate ? ` · expired ${d.expiryDate}` : ''}
+                    <OfficialTitle name={d.name} />
+                    {d.expiryDate ? ` · ${t('expired')} ${d.expiryDate}` : ''}
                   </span>
                   <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                    {docCategoryLabel(d.category)}
+                    {t(docCategoryLabel(d.category))}
                   </span>
                 </div>
               ))}

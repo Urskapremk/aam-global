@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 import { getVesselDocuments } from '@/app/actions/compliance'
 import { DocumentRegister } from '@/components/compliance/document-register'
 import { BOATS } from '@/lib/boats'
+import { getT } from '@/lib/i18n/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,6 +15,7 @@ export default async function DocumentRegisterPage({
   params: Promise<{ boat: string }>
 }) {
   const { boat } = await params
+  const t = await getT()
   const vessel = BOATS.find((b) => b.id === boat)
   if (!vessel) notFound()
 
@@ -26,7 +28,7 @@ export default async function DocumentRegisterPage({
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to compliance
+        {t('Back to compliance')}
       </Link>
       <DocumentRegister
         boat={boat}

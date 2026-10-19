@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 import {
   AlertTriangle,
@@ -11,15 +13,33 @@ import type {
   VesselCompliance,
 } from '@/app/actions/compliance'
 import {
+  daysUntil,
   docCategoryLabel,
-  expiryPhrase,
+  docTitleGlossKey,
+  formatExpiryLine,
   STATUS_LABEL,
   statusChip,
   type ComplianceStatus,
 } from '@/lib/compliance'
+import { useT } from '@/lib/i18n/context'
 import { cn } from '@/lib/utils'
 
+function OfficialTitle({ name }: { name: string }) {
+  const t = useT()
+  const key = docTitleGlossKey(name)
+  if (!key) return <>{name}</>
+  const gloss = t(key)
+  if (gloss === key) return <>{name}</>
+  return (
+    <>
+      {gloss}
+      <span className="font-normal"> · {name}</span>
+    </>
+  )
+}
+
 function StatusPill({ status }: { status: ComplianceStatus }) {
+  const t = useT()
   const c = statusChip(status)
   return (
     <span
@@ -30,13 +50,18 @@ function StatusPill({ status }: { status: ComplianceStatus }) {
       )}
     >
       <span className={cn('h-1.5 w-1.5 rounded-full', c.dot)} />
-      {STATUS_LABEL[status]}
+      {t(STATUS_LABEL[status])}
     </span>
   )
 }
 
 function AlertRow({ alert }: { alert: ExpiryAlert }) {
+  const t = useT()
   const critical = alert.status === 'expired'
+  const when =
+    alert.expiryDate != null
+      ? formatExpiryLine(t, alert.expiryDate, alert.days ?? daysUntil(alert.expiryDate))
+      : null
   return (
     <div className="flex items-center gap-3 border-b border-border/60 px-1 py-3 last:border-b-0">
       <AlertTriangle
@@ -49,9 +74,10 @@ function AlertRow({ alert }: { alert: ExpiryAlert }) {
       <StatusPill status={alert.status} />
       <p className="text-sm text-foreground">
         <span className="font-semibold">{alert.boatName}</span>{' '}
-        <span className="text-muted-foreground">·</span> {alert.docName}{' '}
+        <span className="text-muted-foreground">·</span>{' '}
+        <OfficialTitle name={alert.docName} />{' '}
         <span className="text-muted-foreground">
-          ({docCategoryLabel(alert.category)}) {expiryPhrase(alert.expiryDate)}
+          ({t(docCategoryLabel(alert.category))}) {when}
         </span>
       </p>
     </div>
@@ -59,6 +85,7 @@ function AlertRow({ alert }: { alert: ExpiryAlert }) {
 }
 
 function VesselCard({ vessel }: { vessel: VesselCompliance }) {
+  const t = useT()
   return (
     <div className="rounded-xl border border-border bg-card p-5">
       <div className="flex items-start justify-between gap-3">
@@ -83,16 +110,16 @@ function VesselCard({ vessel }: { vessel: VesselCompliance }) {
           >
             <div className="min-w-0">
               <p className="truncate text-sm text-foreground">
-                {docCategoryLabel(category)}
+                {t(docCategoryLabel(category))}
               </p>
               {doc?.expiryDate && (
                 <p className="text-[11px] text-muted-foreground">
-                  Expires {doc.expiryDate} · {expiryPhrase(doc.expiryDate)}
+                  {formatExpiryLine(t, doc.expiryDate, doc.daysUntilExpiry)}
                 </p>
               )}
               {!doc && (
                 <p className="text-[11px] text-[#8f1a2f]">
-                  No document on file
+                  {t('No document on file')}
                 </p>
               )}
             </div>
@@ -106,7 +133,7 @@ function VesselCard({ vessel }: { vessel: VesselCompliance }) {
         className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-3.5 py-2 text-xs font-medium uppercase tracking-[0.12em] text-foreground transition-colors hover:bg-foreground/[0.04]"
       >
         <FileText className="h-4 w-4" strokeWidth={1.5} />
-        Document register
+        {t('Document register')}
         <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} />
       </Link>
     </div>
@@ -120,6 +147,7 @@ export function ComplianceDashboard({
   vessels: VesselCompliance[]
   alerts: ExpiryAlert[]
 }) {
+  const t = useT()
   return (
     <div className="space-y-6">
       {alerts.length > 0 && (
@@ -134,7 +162,7 @@ export function ComplianceDashboard({
         <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-4">
           <ShieldCheck className="h-5 w-5 text-[#4f7a54]" strokeWidth={1.75} />
           <p className="text-sm text-foreground">
-            No documents expiring in the next 30 days.
+            {t('No documents expiring in the next 30 days.')}
           </p>
         </div>
       )}
@@ -155,10 +183,10 @@ export function ComplianceDashboard({
         >
           <span>
             <span className="font-serif text-lg text-foreground">
-              Journal de bord
+              {t('Journal de bord')}
             </span>
             <span className="mt-0.5 block text-xs text-muted-foreground">
-              Ship / voyage logbook — one entry per trip
+              {t('Ship / voyage logbook — one entry per trip')}
             </span>
           </span>
           <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
@@ -169,10 +197,10 @@ export function ComplianceDashboard({
         >
           <span>
             <span className="font-serif text-lg text-foreground">
-              Journal de p&ecirc;che
+              {t('Journal de pêche')}
             </span>
             <span className="mt-0.5 block text-xs text-muted-foreground">
-              Fishing logbook — activity, catches &amp; declarations
+              {t('Fishing logbook — activity, catches & declarations')}
             </span>
           </span>
           <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
@@ -183,10 +211,10 @@ export function ComplianceDashboard({
         >
           <span>
             <span className="font-serif text-lg text-foreground">
-              Safety &amp; departure
+              {t('Safety & departure')}
             </span>
             <span className="mt-0.5 block text-xs text-muted-foreground">
-              Pre-departure check, safety equipment &amp; incidents
+              {t('Pre-departure check, safety equipment & incidents')}
             </span>
           </span>
           <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
@@ -202,11 +230,12 @@ export function ComplianceDashboard({
       >
         <span>
           <span className="font-serif text-lg text-foreground">
-            Inspection view
+            {t('Inspection view')}
           </span>
           <span className="mt-0.5 block text-xs text-muted-foreground">
-            Print-ready compliance package for a control officer &mdash;
-            documents, logbooks, catches, safety &amp; legal references
+            {t(
+              'Print-ready compliance package for a control officer — documents, logbooks, catches, safety & legal references',
+            )}
           </span>
         </span>
         <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
@@ -216,13 +245,12 @@ export function ComplianceDashboard({
           both required by the spec: the digital record does not replace the
           paper book or a government submission. */}
       <div className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">
-        <p className="font-medium text-foreground">AMM Compliance Record</p>
-        <p className="mt-1">Prepared for compliance and reporting purposes.</p>
+        <p className="font-medium text-foreground">{t('AMM Compliance Record')}</p>
+        <p className="mt-1">{t('Prepared for compliance and reporting purposes.')}</p>
         <p className="mt-3 leading-relaxed">
-          This electronic record does not replace the official physical logbook
-          on board, nor a submission to or validation by the competent Malagasy
-          authority. Official acceptance is subject to the requirements of that
-          authority.
+          {t(
+            'This electronic record does not replace the official physical logbook on board, nor a submission to or validation by the competent Malagasy authority. Official acceptance is subject to the requirements of that authority.',
+          )}
         </p>
       </div>
     </div>

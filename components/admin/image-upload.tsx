@@ -183,7 +183,7 @@ export function ImageUpload({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={value || '/placeholder.svg'}
-              alt="Preview"
+              alt={t('Preview')}
               className="h-36 w-52 rounded-lg border border-border object-cover"
             />
             <button
