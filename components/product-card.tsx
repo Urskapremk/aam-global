@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useId, useState } from 'react'
-import { Plus, X, ZoomIn } from 'lucide-react'
+import { useEffect, useId, useRef, useState, type TouchEvent } from 'react'
+import { ChevronLeft, ChevronRight, Plus, X, ZoomIn } from 'lucide-react'
 import { useCart } from '@/components/cart-context'
 import { formatEur, type Product } from '@/lib/products'
 import { ShopPriceAlt } from '@/components/shop-price'
@@ -18,10 +18,17 @@ export function ProductCard({ product }: { product: Product }) {
   const [photoIndex, setPhotoIndex] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const titleId = useId()
+  const touchStartX = useRef<number | null>(null)
+  const didSwipe = useRef(false)
 
   const gallery = galleryFor(product)
   const imageSrc = gallery[Math.min(photoIndex, gallery.length - 1)] ?? gallery[0]
   const hasGallery = gallery.length > 1
+  const galleryLen = gallery.length
+
+  const goPrev = () =>
+    setPhotoIndex((i) => (i - 1 + galleryLen) % galleryLen)
+  const goNext = () => setPhotoIndex((i) => (i + 1) % galleryLen)
 
   useEffect(() => {
     setPhotoIndex(0)
@@ -33,10 +40,10 @@ export function ProductCard({ product }: { product: Product }) {
       if (e.key === 'Escape') setLightboxOpen(false)
       if (!hasGallery) return
       if (e.key === 'ArrowLeft') {
-        setPhotoIndex((i) => (i - 1 + gallery.length) % gallery.length)
+        setPhotoIndex((i) => (i - 1 + galleryLen) % galleryLen)
       }
       if (e.key === 'ArrowRight') {
-        setPhotoIndex((i) => (i + 1) % gallery.length)
+        setPhotoIndex((i) => (i + 1) % galleryLen)
       }
     }
     document.addEventListener('keydown', onKey)
@@ -46,10 +53,38 @@ export function ProductCard({ product }: { product: Product }) {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
     }
-  }, [lightboxOpen, hasGallery, gallery.length])
+  }, [lightboxOpen, hasGallery, galleryLen])
 
-  const dots = (
-    <div className="flex gap-1.5">
+  const onGalleryTouchStart = (e: TouchEvent) => {
+    touchStartX.current = e.touches[0]?.clientX ?? null
+    didSwipe.current = false
+  }
+
+  const onGalleryTouchEnd = (e: TouchEvent) => {
+    if (touchStartX.current == null || !hasGallery) return
+    const endX = e.changedTouches[0]?.clientX
+    if (endX == null) {
+      touchStartX.current = null
+      return
+    }
+    const dx = endX - touchStartX.current
+    touchStartX.current = null
+    if (Math.abs(dx) < 40) return
+    didSwipe.current = true
+    if (dx < 0) goNext()
+    else goPrev()
+  }
+
+  const openLightbox = () => {
+    if (didSwipe.current) {
+      didSwipe.current = false
+      return
+    }
+    setLightboxOpen(true)
+  }
+
+  const cardDots = (
+    <div className="flex items-center gap-0.5">
       {gallery.map((_, i) => (
         <button
           key={i}
@@ -60,10 +95,14 @@ export function ProductCard({ product }: { product: Product }) {
           }}
           aria-label={`Show photo ${i + 1}`}
           aria-pressed={photoIndex === i}
-          className={`h-2 w-2 rounded-full transition-colors ${
-            photoIndex === i ? 'bg-foreground' : 'bg-foreground/30 hover:bg-foreground/60'
-          }`}
-        />
+          className="flex h-9 w-9 items-center justify-center"
+        >
+          <span
+            className={`h-2.5 w-2.5 rounded-full transition-colors ${
+              photoIndex === i ? 'bg-foreground' : 'bg-foreground/35'
+            }`}
+          />
+        </button>
       ))}
     </div>
   )
@@ -73,7 +112,9 @@ export function ProductCard({ product }: { product: Product }) {
       <div className="relative aspect-square overflow-hidden bg-secondary">
         <button
           type="button"
-          onClick={() => setLightboxOpen(true)}
+          onClick={openLightbox}
+          onTouchStart={onGalleryTouchStart}
+          onTouchEnd={onGalleryTouchEnd}
           className="absolute inset-0 z-0 cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
           aria-label={`View full image of ${product.name}`}
         >
@@ -81,14 +122,15 @@ export function ProductCard({ product }: { product: Product }) {
             src={imageSrc}
             alt={product.alt}
             className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
+            draggable={false}
           />
-          <span className="pointer-events-none absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-background/85 text-muted-foreground opacity-0 shadow-sm backdrop-blur transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          <span className="pointer-events-none absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-background/85 text-muted-foreground opacity-100 shadow-sm backdrop-blur sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
             <ZoomIn className="h-4 w-4" strokeWidth={1.75} aria-hidden />
           </span>
         </button>
         {hasGallery && (
-          <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 rounded-full bg-background/80 px-2 py-1.5 backdrop-blur">
-            {dots}
+          <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 rounded-full bg-background/85 px-1 py-0.5 backdrop-blur">
+            {cardDots}
           </div>
         )}
         <span className="pointer-events-none absolute left-3 top-3 z-10 rounded-full bg-background/90 px-3 py-1 text-xs font-medium tracking-wide text-muted-foreground backdrop-blur">
@@ -159,13 +201,40 @@ export function ProductCard({ product }: { product: Product }) {
                 <X className="h-5 w-5" strokeWidth={1.5} />
               </button>
             </div>
-            <img
-              src={imageSrc}
-              alt={product.alt}
-              className="max-h-[min(80vh,720px)] w-full rounded-xl bg-secondary object-contain shadow-lg"
-            />
+            <div
+              className="relative w-full"
+              onTouchStart={onGalleryTouchStart}
+              onTouchEnd={onGalleryTouchEnd}
+            >
+              <img
+                src={imageSrc}
+                alt={product.alt}
+                className="max-h-[min(80vh,720px)] w-full rounded-xl bg-secondary object-contain shadow-lg"
+                draggable={false}
+              />
+              {hasGallery && (
+                <>
+                  <button
+                    type="button"
+                    onClick={goPrev}
+                    aria-label="Previous photo"
+                    className="absolute left-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-foreground shadow-md backdrop-blur transition-colors hover:bg-background"
+                  >
+                    <ChevronLeft className="h-6 w-6" strokeWidth={1.75} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    aria-label="Next photo"
+                    className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-background/90 text-foreground shadow-md backdrop-blur transition-colors hover:bg-background"
+                  >
+                    <ChevronRight className="h-6 w-6" strokeWidth={1.75} />
+                  </button>
+                </>
+              )}
+            </div>
             {hasGallery && (
-              <div className="mt-4 flex gap-2">
+              <div className="mt-3 flex items-center gap-0.5">
                 {gallery.map((_, i) => (
                   <button
                     key={i}
@@ -173,12 +242,16 @@ export function ProductCard({ product }: { product: Product }) {
                     onClick={() => setPhotoIndex(i)}
                     aria-label={`Show photo ${i + 1}`}
                     aria-pressed={photoIndex === i}
-                    className={`h-2.5 w-2.5 rounded-full transition-colors ${
-                      photoIndex === i
-                        ? 'bg-background'
-                        : 'bg-background/40 hover:bg-background/70'
-                    }`}
-                  />
+                    className="flex h-10 w-10 items-center justify-center"
+                  >
+                    <span
+                      className={`h-3 w-3 rounded-full transition-colors ${
+                        photoIndex === i
+                          ? 'bg-background'
+                          : 'bg-background/45'
+                      }`}
+                    />
+                  </button>
                 ))}
               </div>
             )}
