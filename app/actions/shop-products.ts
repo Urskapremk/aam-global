@@ -111,12 +111,19 @@ async function withEurPrice(data: ProductInput) {
   return { ...data, costAr, transportAr, customsAr, marginPct, priceAr, price }
 }
 
+/** Shop catalogue is loaded in the root layout (CartProvider), so product
+ *  mutations must revalidate that layout — `/shop` alone is not enough. */
+function revalidateShopCatalog() {
+  revalidatePath('/admin/products')
+  revalidatePath('/shop')
+  revalidatePath('/', 'layout')
+}
+
 export async function createProduct(data: ProductInput) {
   await assertAdmin()
   const values = await withEurPrice(data)
   await db.insert(shopProducts).values({ ...values, updatedAt: new Date() })
-  revalidatePath('/admin/products')
-  revalidatePath('/shop')
+  revalidateShopCatalog()
 }
 
 export async function updateProduct(id: number, data: ProductInput) {
@@ -126,8 +133,7 @@ export async function updateProduct(id: number, data: ProductInput) {
     .update(shopProducts)
     .set({ ...values, updatedAt: new Date() })
     .where(eq(shopProducts.id, id))
-  revalidatePath('/admin/products')
-  revalidatePath('/shop')
+  revalidateShopCatalog()
 }
 
 export type StockMoveKind = 'sale' | 'receipt' | 'count'
@@ -199,8 +205,7 @@ export async function recordStockMove(
       ],
     )
     await client.query('COMMIT')
-    revalidatePath('/admin/products')
-    revalidatePath('/shop')
+    revalidateShopCatalog()
     return { ok: true, stock: after }
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {})
@@ -229,6 +234,5 @@ export async function deleteProduct(id: number) {
   await assertAdmin()
   await pool.query(`DELETE FROM shop_stock_moves WHERE "productId" = $1`, [id])
   await db.delete(shopProducts).where(eq(shopProducts.id, id))
-  revalidatePath('/admin/products')
-  revalidatePath('/shop')
+  revalidateShopCatalog()
 }

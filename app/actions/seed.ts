@@ -30,8 +30,10 @@ export async function seedProducts() {
   }))
 
   await db.insert(shopProducts).values(rows)
+  // Catalogue is read in the root layout — revalidate layout, not only /shop.
   revalidatePath('/admin/products')
   revalidatePath('/shop')
+  revalidatePath('/', 'layout')
   return { skipped: false, inserted: rows.length }
 }
 

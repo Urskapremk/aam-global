@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { Suspense } from 'react'
 import { Geist, Cormorant_Garamond } from 'next/font/google'
 import './globals.css'
+import { connection } from 'next/server'
 import { CartProvider } from '@/components/cart-context'
 import { CartDrawer } from '@/components/cart-drawer'
 import { AnalyticsBeacon } from '@/components/analytics-beacon'
@@ -46,12 +47,18 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const [rows, fx] = await Promise.all([
-    getPublishedProducts(),
-    getShopFxRates().catch(() => null),
-  ])
-  const dbCatalog = rows.map((r) => toProduct(r, fx?.arPerEur))
-  const catalog = dbCatalog.length > 0 ? dbCatalog : PRODUCTS
+  let catalog = PRODUCTS
+  if (process.env.DATABASE_URL) {
+    // Opt into a request-time render so admin image/price edits are not stuck
+    // behind a prerendered layout snapshot (catalogue feeds CartProvider).
+    await connection()
+    const [rows, fx] = await Promise.all([
+      getPublishedProducts().catch(() => []),
+      getShopFxRates().catch(() => null),
+    ])
+    const dbCatalog = rows.map((r) => toProduct(r, fx?.arPerEur))
+    if (dbCatalog.length > 0) catalog = dbCatalog
+  }
   return (
     <html lang="en" className={`${geistSans.variable} ${cormorant.variable} bg-background`}>
       <body className="font-sans antialiased">
