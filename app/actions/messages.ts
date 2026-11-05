@@ -1,8 +1,8 @@
 'use server'
 
-import { db } from '@/lib/db'
+import { db, pool } from '@/lib/db'
 import { messages, mailLabels, messageLabels } from '@/lib/db/schema'
-import { and, desc, eq, isNull, inArray } from 'drizzle-orm'
+import { and, desc, eq, isNull, inArray, isNotNull } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { isAdmin } from '@/lib/admin-auth'
 import {
@@ -15,6 +15,44 @@ import { isKnownContact } from '@/app/actions/contacts'
 import { folderForSender } from '@/lib/mail-rules'
 
 export type LabelLite = { id: number; name: string; color: string }
+
+/** Ensure the reply-link column exists (idempotent; matches other admin schema pads). */
+let threadColumnReady: Promise<unknown> | null = null
+function ensureThreadColumn() {
+  threadColumnReady ??= pool
+    .query(
+      `ALTER TABLE messages
+         ADD COLUMN IF NOT EXISTS "inReplyToId" integer`,
+    )
+    .catch((e) => {
+      threadColumnReady = null
+      throw e
+    })
+  return threadColumnReady
+}
+
+/** Strip Re:/Fwd:/Fw: prefixes so legacy replies can still join a thread. */
+function normalizeSubject(subject: string): string {
+  let s = subject.trim()
+  // Repeat until stable — handles "Fwd: Re: …"
+  for (let i = 0; i < 6; i++) {
+    const next = s.replace(/^(re|fwd|fw)\s*:\s*/i, '').trim()
+    if (next === s) break
+    s = next
+  }
+  return s.toLowerCase()
+}
+
+function emailsOverlap(a: string, b: string): boolean {
+  const parse = (raw: string) =>
+    raw
+      .toLowerCase()
+      .split(/[\s,;]+/)
+      .map((e) => e.trim())
+      .filter(Boolean)
+  const setA = new Set(parse(a))
+  return parse(b).some((e) => setA.has(e))
+}
 
 /** Attach the labels applied to each message (many-to-many). */
 async function attachLabels<T extends { id: number }>(
@@ -159,14 +197,83 @@ function folderWhere({ folder = 'prejeto', folderId }: FolderOpts) {
   )
 }
 
+/**
+ * Mark which inbound rows already have an outbound reply linked via
+ * inReplyToId. Also applies a subject+email heuristic so older sends that
+ * predate the column still show as replied when possible.
+ */
+async function attachRepliedFlag<
+  T extends {
+    id: number
+    direction: string
+    email: string
+    subject: string
+    inReplyToId: number | null
+  },
+>(rows: T[]): Promise<(T & { replied: boolean })[]> {
+  if (rows.length === 0) return []
+
+  const linked = await db
+    .select({ inReplyToId: messages.inReplyToId })
+    .from(messages)
+    .where(
+      and(
+        eq(messages.direction, 'outbound'),
+        isNotNull(messages.inReplyToId),
+      ),
+    )
+  const repliedIds = new Set(
+    linked
+      .map((r) => r.inReplyToId)
+      .filter((id): id is number => typeof id === 'number'),
+  )
+
+  // Heuristic fallback for legacy outbound replies (no inReplyToId yet).
+  const inbound = rows.filter((r) => r.direction === 'inbound')
+  if (inbound.length > 0) {
+    const outbound = await db
+      .select({
+        id: messages.id,
+        email: messages.email,
+        subject: messages.subject,
+        inReplyToId: messages.inReplyToId,
+      })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.direction, 'outbound'),
+          isNull(messages.inReplyToId),
+        ),
+      )
+    for (const inn of inbound) {
+      if (repliedIds.has(inn.id)) continue
+      const key = normalizeSubject(inn.subject)
+      if (!key) continue
+      const hit = outbound.some(
+        (out) =>
+          emailsOverlap(inn.email, out.email) &&
+          normalizeSubject(out.subject) === key,
+      )
+      if (hit) repliedIds.add(inn.id)
+    }
+  }
+
+  return rows.map((r) => ({
+    ...r,
+    replied: r.direction === 'inbound' ? repliedIds.has(r.id) : false,
+  }))
+}
+
 export async function getMessages(opts?: FolderOpts) {
   await requireAdmin()
+  await ensureThreadColumn()
   const rows = await db
     .select()
     .from(messages)
     .where(folderWhere(opts ?? {}))
     .orderBy(desc(messages.createdAt))
-  return attachLabels(rows)
+  const withLabels = await attachLabels(rows)
+  return attachRepliedFlag(withLabels)
 }
 
 /**
@@ -175,12 +282,126 @@ export async function getMessages(opts?: FolderOpts) {
  */
 export async function refreshInbox(opts?: FolderOpts) {
   await requireAdmin()
+  await ensureThreadColumn()
   const rows = await db
     .select()
     .from(messages)
     .where(folderWhere(opts ?? {}))
     .orderBy(desc(messages.createdAt))
   const withLabels = await attachLabels(rows)
+  const withReplied = await attachRepliedFlag(withLabels)
+  return withReplied.map((r) => ({
+    ...r,
+    createdAt:
+      r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+  }))
+}
+
+export type ThreadMessage = {
+  id: number
+  direction: string
+  source: string
+  name: string
+  email: string
+  phone: string
+  subject: string
+  body: string
+  meta: string
+  read: boolean
+  archived: boolean
+  folderId: number | null
+  inReplyToId: number | null
+  createdAt: string
+  labels: LabelLite[]
+}
+
+/**
+ * Load the conversation around a message: walk up inReplyToId to the root,
+ * then collect linked descendants. Also pulls in legacy outbound replies that
+ * share the same counterparty email and normalized subject.
+ */
+export async function getMessageThread(
+  messageId: number,
+): Promise<ThreadMessage[]> {
+  await requireAdmin()
+  await ensureThreadColumn()
+
+  const [seed] = await db
+    .select()
+    .from(messages)
+    .where(eq(messages.id, messageId))
+    .limit(1)
+  if (!seed) return []
+
+  // Walk up to the root via explicit reply links.
+  let root = seed
+  const seen = new Set<number>([seed.id])
+  while (root.inReplyToId != null) {
+    if (seen.has(root.inReplyToId)) break
+    const [parent] = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.id, root.inReplyToId))
+      .limit(1)
+    if (!parent) break
+    seen.add(parent.id)
+    root = parent
+  }
+
+  // BFS descendants linked by inReplyToId.
+  const byId = new Map<number, typeof seed>([[root.id, root]])
+  let frontier = [root.id]
+  while (frontier.length) {
+    const children = await db
+      .select()
+      .from(messages)
+      .where(inArray(messages.inReplyToId, frontier))
+    frontier = []
+    for (const child of children) {
+      if (byId.has(child.id)) continue
+      byId.set(child.id, child)
+      frontier.push(child.id)
+    }
+  }
+
+  // Legacy heuristic: same email + normalized subject as the root.
+  const rootKey = normalizeSubject(root.subject)
+  if (rootKey && root.email) {
+    const candidates = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.direction, 'outbound'))
+    for (const c of candidates) {
+      if (byId.has(c.id)) continue
+      if (!emailsOverlap(root.email, c.email)) continue
+      if (normalizeSubject(c.subject) !== rootKey) continue
+      byId.set(c.id, c)
+    }
+  }
+
+  // If the opened message is outbound and still alone, try matching its
+  // counterpart inbound (subject + email) so Sent-folder opens show history.
+  if (byId.size === 1 && seed.direction === 'outbound') {
+    const key = normalizeSubject(seed.subject)
+    if (key && seed.email) {
+      const inbounds = await db
+        .select()
+        .from(messages)
+        .where(eq(messages.direction, 'inbound'))
+      for (const inn of inbounds) {
+        if (!emailsOverlap(inn.email, seed.email)) continue
+        if (normalizeSubject(inn.subject) !== key) continue
+        byId.set(inn.id, inn)
+      }
+    }
+  }
+
+  const ordered = Array.from(byId.values()).sort(
+    (a, b) =>
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() ||
+      a.id - b.id,
+  )
+  const withLabels = await attachLabels(ordered)
   return withLabels.map((r) => ({
     ...r,
     createdAt:
@@ -304,6 +525,7 @@ export async function previewEmail(args: {
 
 export async function sendMessage(args: ComposeArgs) {
   await requireAdmin()
+  await ensureThreadColumn()
   const subject = args.subject.trim()
   const body = args.body.trim()
 
@@ -366,7 +588,8 @@ export async function sendMessage(args: ComposeArgs) {
   })
 
   // Record the outbound message regardless (so you have a sent history),
-  // but flag failures in the subject meta.
+  // but flag failures in the subject meta. Link to the parent via
+  // inReplyToId so the admin inbox can show a conversation thread.
   await db.insert(messages).values({
     direction: 'outbound',
     source: 'email',
@@ -375,9 +598,11 @@ export async function sendMessage(args: ComposeArgs) {
     subject,
     body,
     read: true,
+    inReplyToId: args.inReplyTo ?? null,
     meta: JSON.stringify({
       sent: result.ok,
       error: result.ok ? undefined : result.error,
+      ...(args.inReplyTo ? { inReplyTo: args.inReplyTo } : {}),
       ...(attachments.length
         ? { attachments: attachments.map((a) => a.filename) }
         : {}),

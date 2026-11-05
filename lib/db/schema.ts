@@ -189,6 +189,9 @@ export const messages = pgTable('messages', {
   // Custom folder an inbound message has been filed into. NULL = the default
   // "Prejeto" inbox. Set manually or automatically by a matching mail rule.
   folderId: integer('folderId'),
+  // Parent message id when this row is a reply (set from the admin Reply UI).
+  // NULL for roots / standalone sends. Used to render conversation threads.
+  inReplyToId: integer('inReplyToId'),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
 })
 

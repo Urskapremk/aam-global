@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import {
   Mail,
   ArchiveRestore,
@@ -18,6 +18,7 @@ import {
   Search,
   CheckCircle2,
   Languages,
+  MessagesSquare,
 } from 'lucide-react'
 import {
   markRead,
@@ -27,7 +28,9 @@ import {
   refreshInbox,
   moveToFolder,
   setOrderCompleted,
+  getMessageThread,
   type Folder,
+  type ThreadMessage,
 } from '@/app/actions/messages'
 import { setMessageLabel, createLabel } from '@/app/actions/mail-organize'
 import { SaveContactPrompt } from '@/components/admin/save-contact-prompt'
@@ -63,6 +66,9 @@ export type Message = {
   read: boolean
   archived: boolean
   folderId: number | null
+  inReplyToId?: number | null
+  /** True when an outbound reply is linked (or heuristically matched) to this inbound. */
+  replied?: boolean
   labels: LabelLite[]
   createdAt: string | Date
 }
@@ -410,6 +416,11 @@ export function InboxManager({
                     aria-label={t('Unread')}
                   />
                 )}
+                {m.direction === 'inbound' && m.replied && (
+                  <span className="rounded-md bg-emerald-700/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-800">
+                    {t('Replied')}
+                  </span>
+                )}
                 <span className="ml-auto text-[11px] text-muted-foreground">
                   {fmtDate(m.createdAt)}
                 </span>
@@ -483,6 +494,11 @@ export function InboxManager({
               onSetOrderCompleted={(completed) =>
                 handleSetOrderCompleted(selected, completed)
               }
+              onReplySent={() => {
+                if (selected.direction === 'inbound') {
+                  patchMessage(selected.id, { replied: true, read: true })
+                }
+              }}
             />
           </>
         )}
@@ -503,6 +519,7 @@ function MessageDetail({
   onToggleLabel,
   onCreateLabel,
   onSetOrderCompleted,
+  onReplySent,
 }: {
   message: Message
   isTrash: boolean
@@ -518,6 +535,7 @@ function MessageDetail({
     color: string,
   ) => Promise<{ ok: boolean; error?: string }>
   onSetOrderCompleted: (completed: boolean) => void
+  onReplySent?: () => void
 }) {
   const { t } = useLang()
   const [mode, setMode] = useState<'none' | 'reply' | 'forward'>('none')
@@ -537,6 +555,38 @@ function MessageDetail({
   const [showTranslation, setShowTranslation] = useState(true)
   const [translating, setTranslating] = useState<'en' | 'sl' | null>(null)
   const [translateError, setTranslateError] = useState<string | null>(null)
+  const [thread, setThread] = useState<ThreadMessage[] | null>(null)
+  const [threadLoading, setThreadLoading] = useState(true)
+
+  async function loadThread() {
+    setThreadLoading(true)
+    try {
+      const rows = await getMessageThread(message.id)
+      setThread(rows)
+    } catch {
+      setThread(null)
+    } finally {
+      setThreadLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    setThreadLoading(true)
+    getMessageThread(message.id)
+      .then((rows) => {
+        if (!cancelled) setThread(rows)
+      })
+      .catch(() => {
+        if (!cancelled) setThread(null)
+      })
+      .finally(() => {
+        if (!cancelled) setThreadLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [message.id])
 
   async function submitNewLabel() {
     const name = newLabelName.trim()
@@ -609,26 +659,43 @@ function MessageDetail({
   async function send() {
     const to = mode === 'reply' ? message.email : forwardTo.trim()
     if (!to || !body.trim()) return
+    const wasReply = mode === 'reply'
+    let bareSubject = message.subject.trim()
+    for (let i = 0; i < 6; i++) {
+      const next = bareSubject.replace(/^(re|fwd|fw)\s*:\s*/i, '').trim()
+      if (next === bareSubject) break
+      bareSubject = next
+    }
     setSending(true)
     setFeedback(null)
     const res = await sendMessage({
       to,
-      subject:
-        mode === 'reply'
-          ? `Re: ${message.subject}`
-          : `Fwd: ${message.subject}`,
+      subject: wasReply
+        ? `Re: ${bareSubject || message.subject}`
+        : `Fwd: ${message.subject}`,
       body,
-      inReplyTo: mode === 'reply' ? message.id : undefined,
+      inReplyTo: wasReply ? message.id : undefined,
     })
     setSending(false)
     if (res.ok) {
       cancel()
-      setFeedback(mode === 'reply' ? t('Reply sent.') : t('Message forwarded.'))
+      setFeedback(wasReply ? t('Reply sent.') : t('Message forwarded.'))
+      if (wasReply) {
+        onReplySent?.()
+        void loadThread()
+      }
       if (!res.contactKnown) setContactPrompt(to)
     } else {
       setFeedback(res.error ?? t('Sending failed.'))
     }
   }
+
+  const threadMessages = thread ?? []
+  const showThread = threadMessages.length > 1
+  // When a multi-message thread is available, the conversation section owns
+  // the bodies — keep the top "Original" / translate block for the focused
+  // message only when there is no thread yet (or still loading a singleton).
+  const focusedInThread = threadMessages.find((m) => m.id === message.id)
 
   return (
     <div className="flex flex-col gap-4">
@@ -831,76 +898,200 @@ function MessageDetail({
         </div>
       </div>
 
-      <div className="flex flex-col gap-3">
-        <div>
-          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {t('Original')}
-          </p>
-          <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
-            {message.body}
-          </p>
-        </div>
+      {message.direction === 'inbound' && message.replied && !showThread && (
+        <p className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-800">
+          <CheckCircle2 className="h-4 w-4" strokeWidth={1.5} />
+          {t('Replied')}
+        </p>
+      )}
 
-        {isInbound && message.body.trim() && (
-          <div className="flex flex-col gap-2 border-t border-border pt-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <Languages
-                className="h-4 w-4 shrink-0 text-muted-foreground"
-                strokeWidth={1.5}
-                aria-hidden
-              />
-              <button
-                type="button"
-                onClick={() => runTranslate('en')}
-                disabled={!!translating}
-                className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-              >
-                {translating === 'en'
-                  ? t('Translating…')
-                  : t('Translate to English')}
-              </button>
-              <button
-                type="button"
-                onClick={() => runTranslate('sl')}
-                disabled={!!translating}
-                className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-              >
-                {translating === 'sl'
-                  ? t('Translating…')
-                  : t('Translate to Slovenian')}
-              </button>
-              {translation && (
-                <button
-                  type="button"
-                  onClick={() => setShowTranslation((v) => !v)}
-                  className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-                >
-                  {showTranslation
-                    ? t('Hide translation')
-                    : t('Show translation')}
-                </button>
-              )}
-            </div>
-
-            {translateError && (
-              <p className="text-sm text-destructive">{translateError}</p>
-            )}
-
-            {translation && showTranslation && (
-              <div className="rounded-lg border border-border bg-secondary/40 p-3">
-                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {translation.target === 'en'
-                    ? t('Translation (English)')
-                    : t('Translation (Slovenian)')}
-                </p>
-                <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
-                  {translation.text}
-                </p>
-              </div>
+      {showThread ? (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <MessagesSquare className="h-3.5 w-3.5" strokeWidth={1.5} />
+            {t('Conversation')}
+            {message.direction === 'inbound' && message.replied && (
+              <span className="rounded-md bg-emerald-700/10 px-1.5 py-0.5 text-[10px] font-medium normal-case tracking-normal text-emerald-800">
+                {t('Replied')}
+              </span>
             )}
           </div>
-        )}
-      </div>
+          <ol className="flex flex-col gap-3">
+            {threadMessages.map((tm, idx) => {
+              const outbound = tm.direction === 'outbound'
+              const isFocused = tm.id === message.id
+              return (
+                <li
+                  key={tm.id}
+                  className={cn(
+                    'rounded-lg border p-3 sm:p-4',
+                    outbound
+                      ? 'border-accent/30 bg-accent/5'
+                      : 'border-border bg-secondary/30',
+                    isFocused && 'ring-1 ring-accent/40',
+                  )}
+                >
+                  <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {outbound ? t('Your reply') : idx === 0 ? t('Original message') : t('Incoming')}
+                      {outbound ? '' : tm.name ? ` · ${tm.name}` : ''}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {fmtDate(tm.createdAt)}
+                    </p>
+                  </div>
+                  {!outbound && tm.email && (
+                    <p className="mb-2 break-words text-xs text-muted-foreground">
+                      {tm.email}
+                    </p>
+                  )}
+                  {outbound && (
+                    <p className="mb-2 break-words text-xs text-muted-foreground">
+                      {t('To')} {tm.email}
+                    </p>
+                  )}
+                  <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
+                    {tm.body}
+                  </p>
+                  {isFocused && isInbound && message.body.trim() && (
+                    <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Languages
+                          className="h-4 w-4 shrink-0 text-muted-foreground"
+                          strokeWidth={1.5}
+                          aria-hidden
+                        />
+                        <button
+                          type="button"
+                          onClick={() => runTranslate('en')}
+                          disabled={!!translating}
+                          className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                        >
+                          {translating === 'en'
+                            ? t('Translating…')
+                            : t('Translate to English')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => runTranslate('sl')}
+                          disabled={!!translating}
+                          className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                        >
+                          {translating === 'sl'
+                            ? t('Translating…')
+                            : t('Translate to Slovenian')}
+                        </button>
+                        {translation && (
+                          <button
+                            type="button"
+                            onClick={() => setShowTranslation((v) => !v)}
+                            className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                          >
+                            {showTranslation
+                              ? t('Hide translation')
+                              : t('Show translation')}
+                          </button>
+                        )}
+                      </div>
+                      {translateError && (
+                        <p className="text-sm text-destructive">
+                          {translateError}
+                        </p>
+                      )}
+                      {translation && showTranslation && (
+                        <div className="rounded-lg border border-border bg-card p-3">
+                          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            {translation.target === 'en'
+                              ? t('Translation (English)')
+                              : t('Translation (Slovenian)')}
+                          </p>
+                          <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
+                            {translation.text}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </li>
+              )
+            })}
+          </ol>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {threadLoading && (
+            <p className="text-xs text-muted-foreground">{t('Loading conversation…')}</p>
+          )}
+          <div>
+            <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {t('Original')}
+            </p>
+            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
+              {focusedInThread?.body ?? message.body}
+            </p>
+          </div>
+
+          {isInbound && message.body.trim() && (
+            <div className="flex flex-col gap-2 border-t border-border pt-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Languages
+                  className="h-4 w-4 shrink-0 text-muted-foreground"
+                  strokeWidth={1.5}
+                  aria-hidden
+                />
+                <button
+                  type="button"
+                  onClick={() => runTranslate('en')}
+                  disabled={!!translating}
+                  className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                >
+                  {translating === 'en'
+                    ? t('Translating…')
+                    : t('Translate to English')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => runTranslate('sl')}
+                  disabled={!!translating}
+                  className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                >
+                  {translating === 'sl'
+                    ? t('Translating…')
+                    : t('Translate to Slovenian')}
+                </button>
+                {translation && (
+                  <button
+                    type="button"
+                    onClick={() => setShowTranslation((v) => !v)}
+                    className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                  >
+                    {showTranslation
+                      ? t('Hide translation')
+                      : t('Show translation')}
+                  </button>
+                )}
+              </div>
+
+              {translateError && (
+                <p className="text-sm text-destructive">{translateError}</p>
+              )}
+
+              {translation && showTranslation && (
+                <div className="rounded-lg border border-border bg-secondary/40 p-3">
+                  <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {translation.target === 'en'
+                      ? t('Translation (English)')
+                      : t('Translation (Slovenian)')}
+                  </p>
+                  <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
+                    {translation.text}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {orderLines && (
         <div className="rounded-lg border border-border bg-secondary/50 p-4">
