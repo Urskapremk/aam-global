@@ -17,6 +17,7 @@ import {
   Check,
   Search,
   CheckCircle2,
+  Languages,
 } from 'lucide-react'
 import {
   markRead,
@@ -31,7 +32,7 @@ import {
 import { setMessageLabel, createLabel } from '@/app/actions/mail-organize'
 import { SaveContactPrompt } from '@/components/admin/save-contact-prompt'
 import { MailSidebar } from '@/components/admin/mail-sidebar'
-import { useT } from '@/lib/i18n/context'
+import { useLang, useT } from '@/lib/i18n/context'
 import { cn } from '@/lib/utils'
 
 export type LabelLite = { id: number; name: string; color: string }
@@ -518,7 +519,7 @@ function MessageDetail({
   ) => Promise<{ ok: boolean; error?: string }>
   onSetOrderCompleted: (completed: boolean) => void
 }) {
-  const t = useT()
+  const { t } = useLang()
   const [mode, setMode] = useState<'none' | 'reply' | 'forward'>('none')
   const [body, setBody] = useState('')
   const [forwardTo, setForwardTo] = useState('')
@@ -529,6 +530,13 @@ function MessageDetail({
   const [newLabelName, setNewLabelName] = useState('')
   const [newLabelColor, setNewLabelColor] = useState(LABEL_COLORS[0])
   const [creatingLabel, setCreatingLabel] = useState(false)
+  const [translation, setTranslation] = useState<{
+    target: 'en' | 'sl'
+    text: string
+  } | null>(null)
+  const [showTranslation, setShowTranslation] = useState(true)
+  const [translating, setTranslating] = useState<'en' | 'sl' | null>(null)
+  const [translateError, setTranslateError] = useState<string | null>(null)
 
   async function submitNewLabel() {
     const name = newLabelName.trim()
@@ -539,6 +547,36 @@ function MessageDetail({
     if (res.ok) {
       setNewLabelName('')
       setNewLabelColor(LABEL_COLORS[0])
+    }
+  }
+
+  async function runTranslate(target: 'en' | 'sl') {
+    if (!message.body.trim() || translating) return
+    setTranslating(target)
+    setTranslateError(null)
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: message.body, target }),
+      })
+      const data = (await res.json()) as {
+        ok?: boolean
+        text?: string
+        error?: string
+      }
+      if (!res.ok || !data.ok || !data.text) {
+        setTranslateError(
+          data.error || t('Translation failed. Please try again.'),
+        )
+        return
+      }
+      setTranslation({ target, text: data.text })
+      setShowTranslation(true)
+    } catch {
+      setTranslateError(t('Translation failed. Please try again.'))
+    } finally {
+      setTranslating(null)
     }
   }
 
@@ -793,9 +831,76 @@ function MessageDetail({
         </div>
       </div>
 
-      <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
-        {message.body}
-      </p>
+      <div className="flex flex-col gap-3">
+        <div>
+          <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {t('Original')}
+          </p>
+          <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
+            {message.body}
+          </p>
+        </div>
+
+        {isInbound && message.body.trim() && (
+          <div className="flex flex-col gap-2 border-t border-border pt-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Languages
+                className="h-4 w-4 shrink-0 text-muted-foreground"
+                strokeWidth={1.5}
+                aria-hidden
+              />
+              <button
+                type="button"
+                onClick={() => runTranslate('en')}
+                disabled={!!translating}
+                className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+              >
+                {translating === 'en'
+                  ? t('Translating…')
+                  : t('Translate to English')}
+              </button>
+              <button
+                type="button"
+                onClick={() => runTranslate('sl')}
+                disabled={!!translating}
+                className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+              >
+                {translating === 'sl'
+                  ? t('Translating…')
+                  : t('Translate to Slovenian')}
+              </button>
+              {translation && (
+                <button
+                  type="button"
+                  onClick={() => setShowTranslation((v) => !v)}
+                  className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                >
+                  {showTranslation
+                    ? t('Hide translation')
+                    : t('Show translation')}
+                </button>
+              )}
+            </div>
+
+            {translateError && (
+              <p className="text-sm text-destructive">{translateError}</p>
+            )}
+
+            {translation && showTranslation && (
+              <div className="rounded-lg border border-border bg-secondary/40 p-3">
+                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {translation.target === 'en'
+                    ? t('Translation (English)')
+                    : t('Translation (Slovenian)')}
+                </p>
+                <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
+                  {translation.text}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {orderLines && (
         <div className="rounded-lg border border-border bg-secondary/50 p-4">

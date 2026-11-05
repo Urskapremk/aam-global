@@ -410,6 +410,16 @@ export const SL: Record<string, string> = {
   'new message': 'novo sporočilo',
   'new messages': 'novih sporočil',
   'Failed to create label.': 'Oznake ni bilo mogoče ustvariti.',
+  Original: 'Izvirnik',
+  'Translate to English': 'Prevedi v angleščino',
+  'Translate to Slovenian': 'Prevedi v slovenščino',
+  'Translating…': 'Prevajam…',
+  'Hide translation': 'Skrij prevod',
+  'Show translation': 'Prikaži prevod',
+  'Translation (English)': 'Prevod (angleščina)',
+  'Translation (Slovenian)': 'Prevod (slovenščina)',
+  'Translation failed. Please try again.':
+    'Prevod ni uspel. Poskusite znova.',
 
   // --- Fuel screen ---
   'Fuel in the drums, deliveries in and refuels out':
