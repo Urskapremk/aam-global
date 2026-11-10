@@ -13,6 +13,12 @@ import {
   fuelProcurements,
   fxConfig,
 } from '@/lib/db/schema'
+import {
+  DEFAULT_DENSITY_KG_PER_L,
+  clampDensity,
+  litresFromKg,
+} from '@/lib/fuel-units'
+import { ensureHisnikSchema } from '@/lib/hisnik-schema'
 
 async function assertAdmin() {
   if (!(await isAdmin())) throw new Error('Not authorised')
@@ -134,15 +140,18 @@ export async function setManualFxRates(
   revalidatePath('/admin')
 }
 
-export type FuelEntryType = 'delivery' | 'refuel' | 'adjustment'
+export type FuelEntryType = 'delivery' | 'refuel' | 'adjustment' | 'weigh'
+export type FuelSource = 'admin' | 'caretaker'
+export type FuelEventType =
+  | 'issue'
+  | 'weigh-return'
+  | 'weigh-morning'
+  | 'fill-issue'
 
 // How a refuel amount was entered. Litres is the canonical stored unit; kg and
 // cans are converted into litres on save but the original entry is kept so the
 // archive shows exactly what was carried (e.g. "3 cans × 20 L").
 export type FuelInputUnit = 'litres' | 'kg' | 'cans'
-
-// Petrol density used to convert kilograms into litres (midpoint of 0.74–0.76).
-const PETROL_KG_PER_L = 0.75
 
 export type FuelEntry = {
   id: string
@@ -156,6 +165,8 @@ export type FuelEntry = {
   costAr: number | null
   note: string | null
   loggedBy: string | null
+  source: FuelSource
+  eventType: FuelEventType | null
   occurredAt: string
 }
 
@@ -164,8 +175,9 @@ function toLitres(
   unit: FuelInputUnit,
   qty: number,
   canSizeL: number,
+  densityKgPerL = DEFAULT_DENSITY_KG_PER_L,
 ): number {
-  if (unit === 'kg') return qty / PETROL_KG_PER_L
+  if (unit === 'kg') return litresFromKg(qty, densityKgPerL)
   if (unit === 'cans') return qty * canSizeL
   return qty
 }
@@ -173,6 +185,7 @@ function toLitres(
 export type FuelState = {
   stockLitres: number
   reorderLitres: number // 0 = not set
+  densityKgPerL: number
   low: boolean // only true when a level is set AND stock is at/under it
   month: string // YYYY-MM, lodge-local
   thisMonth: {
@@ -186,18 +199,45 @@ export type FuelState = {
 }
 
 // The signed effect of an entry on stock. Deliveries add, refuels remove,
-// adjustments are already signed by the person entering them.
+// adjustments are already signed by the person entering them. Weigh events
+// (caretaker tank/can readings) never move warehouse stock.
 function delta(type: string, litres: number): number {
   if (type === 'refuel') return -Math.abs(litres)
   if (type === 'delivery') return Math.abs(litres)
+  if (type === 'weigh') return 0
   return litres // adjustment: trust the sign as entered
+}
+
+function normalizeSource(s: string | null | undefined): FuelSource {
+  return s === 'caretaker' ? 'caretaker' : 'admin'
+}
+
+function normalizeEventType(
+  s: string | null | undefined,
+): FuelEventType | null {
+  if (
+    s === 'issue' ||
+    s === 'weigh-return' ||
+    s === 'weigh-morning' ||
+    s === 'fill-issue'
+  ) {
+    return s
+  }
+  return null
+}
+
+function normalizeEntryType(t: string): FuelEntryType {
+  if (t === 'delivery' || t === 'refuel' || t === 'adjustment' || t === 'weigh') {
+    return t
+  }
+  return 'adjustment'
 }
 
 // Shared row → FuelEntry mapping (used by the active list and the archive).
 function mapFuelEntry(r: typeof fuelLog.$inferSelect): FuelEntry {
   return {
     id: r.id,
-    type: r.type as FuelEntryType,
+    type: normalizeEntryType(r.type),
     litres: r.litres,
     inputUnit: (r.inputUnit as FuelInputUnit | null) ?? null,
     inputQty: r.inputQty,
@@ -207,11 +247,17 @@ function mapFuelEntry(r: typeof fuelLog.$inferSelect): FuelEntry {
     costAr: r.costAr,
     note: r.note,
     loggedBy: r.loggedBy,
+    source: normalizeSource(r.source),
+    eventType: normalizeEventType(r.eventType),
     occurredAt: new Date(r.occurredAt).toISOString(),
   }
 }
 
 export async function getFuelState(): Promise<FuelState> {
+  // Ensure caretaker columns exist before selecting them via drizzle schema.
+  await ensureHisnikSchema().catch(() => {
+    // Offline / missing DB during build — fall through; queries will surface.
+  })
   const [rows, cfg] = await Promise.all([
     // Archived entries are excluded everywhere stock is computed or shown.
     db
@@ -224,6 +270,9 @@ export async function getFuelState(): Promise<FuelState> {
 
   const stockLitres = rows.reduce((s, r) => s + delta(r.type, r.litres), 0)
   const reorderLitres = cfg.length ? cfg[0].reorderLitres : 0
+  const densityKgPerL = clampDensity(
+    cfg.length ? cfg[0].densityKgPerL : DEFAULT_DENSITY_KG_PER_L,
+  )
   const month = lodgeMonthKey(new Date())
 
   let deliveredLitres = 0
@@ -246,6 +295,7 @@ export async function getFuelState(): Promise<FuelState> {
   return {
     stockLitres: Math.round(stockLitres * 10) / 10,
     reorderLitres,
+    densityKgPerL,
     // A reorder level of 0 means "not set", so it can never raise a false alarm.
     low: reorderLitres > 0 && stockLitres <= reorderLitres,
     month,
@@ -283,6 +333,7 @@ export async function logFuelDelivery(input: {
     costAr: input.costAr != null && input.costAr > 0 ? input.costAr : null,
     note: input.note?.trim() || null,
     loggedBy: input.loggedBy?.trim() || null,
+    source: 'admin',
     occurredAt: parseOccurredAt(input.occurredAt),
   })
   revalidatePath('/admin/fuel')
@@ -309,7 +360,16 @@ export async function logFuelRefuel(input: {
   if (unit === 'cans' && canSizeL <= 0) {
     throw new Error('Enter the size of one can in litres')
   }
-  const litres = toLitres(unit, qty, canSizeL)
+  await ensureHisnikSchema().catch(() => {})
+  const cfg = await db
+    .select()
+    .from(fuelConfig)
+    .where(eq(fuelConfig.id, 1))
+    .limit(1)
+  const density = clampDensity(
+    cfg[0]?.densityKgPerL ?? DEFAULT_DENSITY_KG_PER_L,
+  )
+  const litres = toLitres(unit, qty, canSizeL, density)
   if (!litres || litres <= 0) throw new Error('Enter how much fuel went into the boat')
   await db.insert(fuelLog).values({
     id: newId('fuel'),
@@ -322,6 +382,7 @@ export async function logFuelRefuel(input: {
     costAr: null,
     note: input.note?.trim() || null,
     loggedBy: input.loggedBy?.trim() || null,
+    source: 'admin',
     occurredAt: parseOccurredAt(input.occurredAt),
   })
   revalidatePath('/admin/fuel')
@@ -345,6 +406,7 @@ export async function logFuelAdjustment(input: {
     // A correction with no reason is useless months later, so a note is asked.
     note: input.note?.trim() || null,
     loggedBy: input.loggedBy?.trim() || null,
+    source: 'admin',
     occurredAt: new Date(),
   })
   revalidatePath('/admin/fuel')
@@ -354,6 +416,7 @@ export async function logFuelAdjustment(input: {
 export async function setFuelReorderLevel(litres: number): Promise<void> {
   await assertAdmin()
   const value = Math.max(0, Number(litres) || 0)
+  await ensureHisnikSchema().catch(() => {})
   await db
     .insert(fuelConfig)
     .values({ id: 1, reorderLitres: value, updatedAt: new Date() })
@@ -363,6 +426,28 @@ export async function setFuelReorderLevel(litres: number): Promise<void> {
     })
   revalidatePath('/admin/fuel')
   revalidatePath('/admin')
+}
+
+/** Admin-configurable petrol density (kg per litre) for L ↔ kg conversion. */
+export async function setFuelDensity(densityKgPerL: number): Promise<void> {
+  await assertAdmin()
+  await ensureHisnikSchema().catch(() => {})
+  const value = clampDensity(densityKgPerL)
+  await db
+    .insert(fuelConfig)
+    .values({
+      id: 1,
+      reorderLitres: 0,
+      densityKgPerL: value,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: fuelConfig.id,
+      set: { densityKgPerL: value, updatedAt: new Date() },
+    })
+  revalidatePath('/admin/fuel')
+  revalidatePath('/admin')
+  revalidatePath('/hisnik')
 }
 
 export async function deleteFuelEntry(id: string): Promise<void> {
@@ -1088,6 +1173,7 @@ export async function receiveFuelPurchase(input: {
       costAr: totalCostAr,
       note: noteParts.join(' · '),
       loggedBy: input.receivedBy?.trim() || existing.paidBy || null,
+      source: 'admin',
       occurredAt: when,
     })
     await tx

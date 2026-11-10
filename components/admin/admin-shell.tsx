@@ -61,14 +61,14 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </div>
         {/* Row 2: controls, centered, below a divider. */}
         <div className="flex items-center justify-center gap-2 border-t border-border px-4 py-2 sm:gap-3">
-            {/* Language toggle. Two pills so the current choice is always
-                visible (not a single button showing the OTHER language). */}
+            {/* Language toggle. Pills for every AAM UI language so the current
+                choice is always visible (not a single button showing the OTHER). */}
             <div
               className="flex items-center gap-1 rounded-lg border border-panel-header/25 p-0.5"
               role="group"
               aria-label={t('Language')}
             >
-              {(['en', 'sl'] as const).map((l) => (
+              {(['en', 'sl', 'fr'] as const).map((l) => (
                 <button
                   key={l}
                   type="button"
@@ -81,7 +81,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                       : 'text-panel-header/60 hover:text-panel-header',
                   )}
                 >
-                  {l === 'en' ? 'EN' : 'SL'}
+                  {l.toUpperCase()}
                 </button>
               ))}
             </div>
