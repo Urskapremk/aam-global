@@ -50,6 +50,7 @@ import {
   restoreBoatFuelReading,
   restoreFuelEntry,
   restoreFuelProcurement,
+  setFuelDensity,
   setFuelReorderLevel,
   updateFuelPurchase,
   type BoatFuelReading,
@@ -60,6 +61,10 @@ import {
   type FuelReadingKind,
   type PaymentMethod,
 } from '@/app/actions/fuel'
+import { DEFAULT_DENSITY_KG_PER_L } from '@/lib/fuel-units'
+
+// Fallback when fuel state has not loaded a configured density yet.
+const PETROL_KG_PER_L = DEFAULT_DENSITY_KG_PER_L
 import { uploadImage } from '@/app/actions/upload'
 import { BOATS, boatEngineSlots, type EngineSlot } from '@/lib/boats'
 import { shrinkImageToDataUrl, dataUrlToFile } from '@/lib/image-client'
@@ -109,9 +114,6 @@ const fxHint = (ar: number | null, fx: FxRates | undefined, lang: string) => {
 // Shown as a range to help judge how heavy a canister load is to carry.
 const PETROL_KG_PER_L_LOW = 0.74
 const PETROL_KG_PER_L_HIGH = 0.76
-// Single midpoint density used to auto-convert litres <-> kilograms in the
-// reading form. Sits inside the 0.74–0.76 range above.
-const PETROL_KG_PER_L = 0.75
 const weightHint = (litresVal: number | null, lang: string) => {
   if (litresVal == null || litresVal <= 0) return null
   const loc = numLocale(lang)
@@ -157,7 +159,7 @@ function stockTone(stockLitres: number, reorderLitres: number) {
   return DUE_TONE.ok
 }
 
-type Mode = 'delivery' | 'refuel' | 'adjust' | 'reorder' | null
+type Mode = 'delivery' | 'refuel' | 'adjust' | 'reorder' | 'density' | null
 
 export function FuelTab() {
   const { t, lang } = useLang()
@@ -332,12 +334,19 @@ export function FuelTab() {
               >
                 {t('Reorder level')}
               </ActionButton>
+              <ActionButton
+                active={mode === 'density'}
+                onClick={() => setMode(mode === 'density' ? null : 'density')}
+              >
+                {t('Density (kg/L)')}
+              </ActionButton>
             </div>
 
             {mode && (
               <FuelForm
                 mode={mode}
-                current={d.reorderLitres}
+                current={mode === 'density' ? d.densityKgPerL : d.reorderLitres}
+                densityKgPerL={d.densityKgPerL}
                 onDone={() => {
                   setMode(null)
                   refresh()
@@ -943,16 +952,20 @@ const labelCls =
 function FuelForm({
   mode,
   current,
+  densityKgPerL = PETROL_KG_PER_L,
   onDone,
   onCancel,
 }: {
   mode: Exclude<Mode, null>
   current: number
+  densityKgPerL?: number
   onDone: () => void
   onCancel: () => void
 }) {
   const { t, lang } = useLang()
-  const [amount, setAmount] = useState(mode === 'reorder' ? String(current || '') : '')
+  const [amount, setAmount] = useState(
+    mode === 'reorder' || mode === 'density' ? String(current || '') : '',
+  )
   const [boat, setBoat] = useState<string>(BOATS[0]?.id ?? 'odyssey')
   const [cost, setCost] = useState('')
   const [who, setWho] = useState('')
@@ -974,7 +987,7 @@ function FuelForm({
     }
     const q = Number(amount) || 0
     if (q <= 0) return null
-    return unit === 'kg' ? q / PETROL_KG_PER_L : q
+    return unit === 'kg' ? q / densityKgPerL : q
   })()
 
   const title =
@@ -984,7 +997,9 @@ function FuelForm({
         ? t('Fuel put into a boat')
         : mode === 'adjust'
           ? t('Manual correction')
-          : t('Reorder level')
+          : mode === 'density'
+            ? t('Petrol density (kg per litre)')
+            : t('Reorder level')
 
   async function submit() {
     setBusy(true)
@@ -1008,6 +1023,8 @@ function FuelForm({
         })
       } else if (mode === 'adjust') {
         await logFuelAdjustment({ litres: Number(amount), loggedBy: who, note })
+      } else if (mode === 'density') {
+        await setFuelDensity(Number(amount))
       } else {
         await setFuelReorderLevel(Number(amount))
       }
@@ -1129,7 +1146,7 @@ function FuelForm({
                 {unit !== 'litres' &&
                   ` · ${
                     unit === 'kg'
-                      ? `${PETROL_KG_PER_L} kg/L`
+                      ? `${densityKgPerL} kg/L`
                       : `${cans || 0} × ${canSize || 0} L`
                   }`}
               </p>
@@ -1157,16 +1174,27 @@ function FuelForm({
                 ? t('Litres (+ or −)')
                 : mode === 'reorder'
                   ? t('Reorder at (litres)')
-                  : t('Litres')}
+                  : mode === 'density'
+                    ? t('kg per litre')
+                    : t('Litres')}
             </label>
             <input
               type="text"
               inputMode={mode === 'adjust' ? 'text' : 'decimal'}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder={mode === 'adjust' ? '-20' : '200'}
+              placeholder={
+                mode === 'adjust' ? '-20' : mode === 'density' ? '0.75' : '200'
+              }
               className={`mt-1.5 ${inputCls}`}
             />
+            {mode === 'density' && (
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                {t(
+                  'Used for L ↔ kg conversion in admin and the caretaker (/hisnik) app. Typical petrol: 0.74–0.76.',
+                )}
+              </p>
+            )}
           </div>
         )}
 
@@ -1184,7 +1212,7 @@ function FuelForm({
           </div>
         )}
 
-        {mode !== 'reorder' && (
+        {mode !== 'reorder' && mode !== 'density' && (
           <div className={mode === 'refuel' || mode === 'delivery' ? 'sm:col-span-2' : ''}>
             <label className={labelCls}>
               {mode === 'adjust' ? t('Reason') : t('Note (optional)')}
@@ -1203,7 +1231,7 @@ function FuelForm({
           </div>
         )}
 
-        {mode !== 'reorder' && (
+        {mode !== 'reorder' && mode !== 'density' && (
           <div>
             <label className={labelCls}>{t('Logged by (optional)')}</label>
             <input
@@ -1253,23 +1281,30 @@ function LedgerRow({
   const signed =
     entry.type === 'refuel'
       ? `−${litres(Math.abs(entry.litres), lang)}`
-      : entry.type === 'adjustment'
-        ? `${entry.litres > 0 ? '+' : '−'}${litres(Math.abs(entry.litres), lang)}`
-        : `+${litres(Math.abs(entry.litres), lang)}`
+      : entry.type === 'weigh'
+        ? litres(Math.abs(entry.litres), lang)
+        : entry.type === 'adjustment'
+          ? `${entry.litres > 0 ? '+' : '−'}${litres(Math.abs(entry.litres), lang)}`
+          : `+${litres(Math.abs(entry.litres), lang)}`
 
   const tone =
     entry.type === 'delivery'
       ? DUE_TONE.ok.fg
       : entry.type === 'refuel'
         ? DUE_TONE.soon.fg
-        : DUE_TONE.due.fg
+        : entry.type === 'weigh'
+          ? DUE_TONE.unknown.fg
+          : DUE_TONE.due.fg
 
   const kindLabel =
     entry.type === 'delivery'
       ? t('Delivery')
       : entry.type === 'refuel'
         ? `${t('Refuel')} · ${entry.boatLabel ?? ''}`.trim()
-        : t('Adjustment')
+        : entry.type === 'weigh'
+          ? `${t('Weigh')} · ${entry.boatLabel ?? ''}`.trim()
+          : t('Adjustment')
+  const caretaker = entry.source === 'caretaker'
 
   const [open, setOpen] = useState(false)
   const summary = inputSummary(entry, lang)
@@ -1301,8 +1336,13 @@ function LedgerRow({
             {signed}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm text-foreground">
+            <span className="flex items-center gap-2 truncate text-sm text-foreground">
               {kindLabel}
+              {caretaker && (
+                <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-accent">
+                  {t('Caretaker')}
+                </span>
+              )}
             </span>
             <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
               {dateFmt(entry.occurredAt, lang)}
@@ -1365,6 +1405,12 @@ function LedgerRow({
               <dd className="text-foreground">{entry.loggedBy}</dd>
             </>
           )}
+
+          <dt className="text-muted-foreground">{t('Source')}</dt>
+          <dd className="text-foreground">
+            {caretaker ? t('Caretaker') : t('Admin')}
+            {entry.eventType ? ` · ${entry.eventType}` : ''}
+          </dd>
 
           {entry.note && (
             <>
@@ -1560,16 +1606,20 @@ function ArchivedFuelRow({
   const signed =
     entry.type === 'refuel'
       ? `−${litres(Math.abs(entry.litres), lang)}`
-      : entry.type === 'adjustment'
-        ? `${entry.litres > 0 ? '+' : '−'}${litres(Math.abs(entry.litres), lang)}`
-        : `+${litres(Math.abs(entry.litres), lang)}`
+      : entry.type === 'weigh'
+        ? litres(Math.abs(entry.litres), lang)
+        : entry.type === 'adjustment'
+          ? `${entry.litres > 0 ? '+' : '−'}${litres(Math.abs(entry.litres), lang)}`
+          : `+${litres(Math.abs(entry.litres), lang)}`
 
   const kindLabel =
     entry.type === 'delivery'
       ? t('Delivery')
       : entry.type === 'refuel'
         ? `${t('Refuel')} · ${entry.boatLabel ?? ''}`.trim()
-        : t('Adjustment')
+        : entry.type === 'weigh'
+          ? `${t('Weigh')} · ${entry.boatLabel ?? ''}`.trim()
+          : t('Adjustment')
 
   const [open, setOpen] = useState(false)
   const summary = inputSummary(entry, lang)

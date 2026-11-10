@@ -628,6 +628,7 @@ export const maintenanceLog = pgTable('maintenance_log', {
 export const fuelLog = pgTable('fuel_log', {
   id: text('id').primaryKey(),
   // 'delivery' (+litres) | 'refuel' (−litres) | 'adjustment' (signed litres)
+  // | 'weigh' (tank/can reading — does NOT change warehouse stock)
   type: text('type').notNull(),
   litres: doublePrecision('litres').notNull(), // canonical converted amount
   // How the amount was entered, so the archive can show what was really typed.
@@ -639,6 +640,12 @@ export const fuelLog = pgTable('fuel_log', {
   costAr: doublePrecision('costAr'), // total cost in Ariary, deliveries only
   note: text('note'),
   loggedBy: text('loggedBy'),
+  // Who recorded the movement: 'admin' (office) | 'caretaker' (hišnik PWA).
+  // Null on legacy rows is treated as admin.
+  source: text('source'),
+  // Caretaker event detail when source = caretaker:
+  // 'issue' | 'weigh-return' | 'weigh-morning' | 'fill-issue' | null
+  eventType: text('eventType'),
   occurredAt: timestamp('occurredAt', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -652,10 +659,34 @@ export const fuelLog = pgTable('fuel_log', {
 
 // Single row (id = 1): the litres level at or below which the office should
 // reorder. Zero means "no level set" — the UI says so rather than showing a
-// false all-clear.
+// false all-clear. densityKgPerL converts L ↔ kg for caretaker + admin forms.
 export const fuelConfig = pgTable('fuel_config', {
   id: integer('id').primaryKey().default(1),
   reorderLitres: doublePrecision('reorderLitres').notNull().default(0),
+  // Petrol density (kg per litre). Midpoint of 0.74–0.76 when unset.
+  densityKgPerL: doublePrecision('densityKgPerL').notNull().default(0.75),
+  updatedAt: timestamp('updatedAt', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+})
+
+// Portable skipper can state for the Odyssey III daily weigh → fill cycle.
+// One active can per boat (id = boat id for the default can). Warehouse stock
+// only moves on fill-from-warehouse; weigh events update this row only.
+export const caretakerCans = pgTable('caretaker_cans', {
+  id: text('id').primaryKey(),
+  boat: text('boat').notNull(), // BoatId, typically 'odyssey-iii'
+  label: text('label').notNull().default('Prenosna kanta'),
+  // 'with_skipper' | 'at_warehouse'
+  location: text('location').notNull().default('at_warehouse'),
+  // Contents after the last weigh or fill (canonical litres + optional kg).
+  lastLitres: doublePrecision('lastLitres'),
+  lastKilograms: doublePrecision('lastKilograms'),
+  // Litres in the can when it was last filled/issued (baseline for consumption).
+  issuedLitres: doublePrecision('issuedLitres'),
+  issuedKilograms: doublePrecision('issuedKilograms'),
+  issuedAt: timestamp('issuedAt', { withTimezone: true }),
+  lastWeighedAt: timestamp('lastWeighedAt', { withTimezone: true }),
   updatedAt: timestamp('updatedAt', { withTimezone: true })
     .notNull()
     .defaultNow(),
