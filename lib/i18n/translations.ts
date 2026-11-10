@@ -902,6 +902,8 @@ export const SL: Record<string, string> = {
   'AAM · Fuel': 'AAM · Gorivo',
   Storekeeper: 'Skladiščnik',
   Caretaker: 'Skladiščnik',
+  'Used for L ↔ kg conversion in admin and the storekeeper (/hisnik) app. Typical petrol: 0.74–0.76.':
+    'Za pretvorbo L ↔ kg v adminu in aplikaciji skladiščnika (/hisnik). Tipičen bencin: 0,74–0,76.',
   'Enter your PIN to issue and weigh fuel. Prices are not shown.':
     'Vnesi PIN za izdajo in tehtanje goriva. Cene niso prikazane.',
   PIN: 'PIN',
@@ -980,6 +982,8 @@ export const FR: Record<string, string> = {
   Fuel: 'Carburant',
   Storekeeper: 'Magasinier',
   Caretaker: 'Magasinier',
+  'Used for L ↔ kg conversion in admin and the storekeeper (/hisnik) app. Typical petrol: 0.74–0.76.':
+    'Pour la conversion L ↔ kg dans l’admin et l’app magasinier (/hisnik). Essence typique : 0,74–0,76.',
   'AAM · Fuel': 'AAM · Carburant',
   'Enter your PIN to issue and weigh fuel. Prices are not shown.':
     'Entrez le PIN pour délivrer et peser le carburant. Les prix ne sont pas affichés.',

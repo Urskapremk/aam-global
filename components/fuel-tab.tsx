@@ -1191,7 +1191,7 @@ function FuelForm({
             {mode === 'density' && (
               <p className="mt-1.5 text-[11px] text-muted-foreground">
                 {t(
-                  'Used for L ↔ kg conversion in admin and the caretaker (/hisnik) app. Typical petrol: 0.74–0.76.',
+                  'Used for L ↔ kg conversion in admin and the storekeeper (/hisnik) app. Typical petrol: 0.74–0.76.',
                 )}
               </p>
             )}

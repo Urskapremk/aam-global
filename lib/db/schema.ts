@@ -640,7 +640,7 @@ export const fuelLog = pgTable('fuel_log', {
   costAr: doublePrecision('costAr'), // total cost in Ariary, deliveries only
   note: text('note'),
   loggedBy: text('loggedBy'),
-  // Who recorded the movement: 'admin' (office) | 'caretaker' (hišnik PWA).
+  // Who recorded the movement: 'admin' (office) | 'caretaker' (skladiščnik PWA).
   // Null on legacy rows is treated as admin.
   source: text('source'),
   // Caretaker event detail when source = caretaker:
