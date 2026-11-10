@@ -643,7 +643,7 @@ function SkipperPicker({
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">
-          {t('No skippers yet — add captains in admin, or type a name.')}
+          {t('No skippers yet — add them under Admin → Staff (HR), or type a name.')}
         </p>
       )}
       {!skipperId && (

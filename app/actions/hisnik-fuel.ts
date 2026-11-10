@@ -1,6 +1,6 @@
 'use server'
 
-import { and, asc, desc, eq, gte, isNull } from 'drizzle-orm'
+import { and, desc, eq, gte, isNull } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 
 import {
@@ -11,8 +11,12 @@ import {
 } from '@/lib/caretaker-auth'
 import { boatName } from '@/lib/boats'
 import { db } from '@/lib/db'
-import { captains, caretakerCans, fuelConfig, fuelLog } from '@/lib/db/schema'
+import { caretakerCans, fuelConfig, fuelLog } from '@/lib/db/schema'
 import { ensureHisnikSchema } from '@/lib/hisnik-schema'
+import {
+  listFuelSkippersFromHr,
+  resolveFuelSkipperFromHr,
+} from '@/lib/hisnik-skippers'
 import {
   DEFAULT_DENSITY_KG_PER_L,
   ODYSSEY_II_CAN_L,
@@ -112,30 +116,15 @@ export type HisnikState = {
 const III_CAN_ID = 'can-odyssey-iii'
 
 async function listActiveSkippers(): Promise<HisnikSkipper[]> {
-  const rows = await db
-    .select({ id: captains.id, name: captains.name })
-    .from(captains)
-    .where(eq(captains.active, true))
-    .orderBy(asc(captains.name))
-  return rows.map((r) => ({ id: r.id, name: r.name }))
+  // Admin HR staff (Špela’s crew/staff list) — not fleet `captains`.
+  return listFuelSkippersFromHr()
 }
 
 async function resolveSkipper(input: {
   skipperId?: string | null
   skipperName?: string | null
 }): Promise<HisnikSkipper> {
-  const id = input.skipperId?.trim() || ''
-  if (id) {
-    const [row] = await db
-      .select({ id: captains.id, name: captains.name })
-      .from(captains)
-      .where(eq(captains.id, id))
-      .limit(1)
-    if (row) return { id: row.id, name: row.name }
-  }
-  const name = input.skipperName?.trim() || ''
-  if (name) return { id: '', name }
-  throw new Error('Select a skipper')
+  return resolveFuelSkipperFromHr(input)
 }
 
 async function getOrCreateIiiCan() {

@@ -945,8 +945,8 @@ export const SL: Record<string, string> = {
   '2 cans (50 L)': '2 kanti (50 L)',
   Skipper: 'Skiper',
   'Select a skipper': 'Izberi skiperja',
-  'No skippers yet — add captains in admin, or type a name.':
-    'Še ni skiperjev — dodaj kapitane v adminu ali vpiši ime.',
+  'No skippers yet — add them under Admin → Staff (HR), or type a name.':
+    'Še ni skiperjev — dodaj jih v Admin → Osebje (HR) ali vpiši ime.',
   'Skipper name': 'Ime skiperja',
   'Weighed amount': 'Stehtana količina',
   'Confirm issue': 'Potrdi izdajo',
@@ -1029,8 +1029,8 @@ export const FR: Record<string, string> = {
   '2 cans (50 L)': '2 bidons (50 L)',
   Skipper: 'Skipper',
   'Select a skipper': 'Choisir un skipper',
-  'No skippers yet — add captains in admin, or type a name.':
-    'Pas encore de skippers — ajoutez des capitaines dans l’admin, ou saisissez un nom.',
+  'No skippers yet — add them under Admin → Staff (HR), or type a name.':
+    'Pas encore de skippers — ajoutez-les dans Admin → Personnel (RH), ou saisissez un nom.',
   'Skipper name': 'Nom du skipper',
   'Weighed amount': 'Quantité pesée',
   'Confirm issue': 'Confirmer la délivrance',
