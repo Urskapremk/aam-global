@@ -914,6 +914,8 @@ export const SL: Record<string, string> = {
   Refresh: 'Osveži',
   'Odyssey II': 'Odyssey II',
   'Issue 1 or 2 × 25 L': 'Izdaj 1 ali 2 × 25 L',
+  'Odyssey III': 'Odyssey III',
+  'Portable can · daily cycle': 'Prenosna kanta · dnevni krog',
   'Odyssey III · returned can': 'Odyssey III · vrnjena kanta',
   'After the trip: weigh consumption (no stock change)':
     'Po vožnji: stehtaj porabo (brez zaloge)',
@@ -982,6 +984,8 @@ export const FR: Record<string, string> = {
   Refresh: 'Actualiser',
   'Odyssey II': 'Odyssey II',
   'Issue 1 or 2 × 25 L': 'Délivrer 1 ou 2 × 25 L',
+  'Odyssey III': 'Odyssey III',
+  'Portable can · daily cycle': 'Bidon portable · cycle journalier',
   'Odyssey III · returned can': 'Odyssey III · bidon rendu',
   'After the trip: weigh consumption (no stock change)':
     'Après la sortie : peser la consommation (sans toucher le stock)',

@@ -25,7 +25,7 @@ import { LANGS, type Lang } from '@/lib/i18n/translations'
 import { ODYSSEY_II_CAN_L } from '@/lib/fuel-units'
 import { DUE_TONE } from '@/lib/maintenance'
 
-type Screen = 'home' | 'ii' | 'iii-return' | 'iii-fill'
+type Screen = 'home' | 'ii' | 'iii' | 'iii-return' | 'iii-fill'
 
 function numLocale(lang: Lang) {
   if (lang === 'sl') return 'sl-SI'
@@ -250,8 +250,7 @@ export function HisnikApp({ initiallyAuthed }: { initiallyAuthed: boolean }) {
           busy={pending}
           onRefresh={() => startTransition(() => void refresh())}
           onIi={() => setScreen('ii')}
-          onReturn={() => setScreen('iii-return')}
-          onFill={() => setScreen('iii-fill')}
+          onIii={() => setScreen('iii')}
         />
       )}
       {state && screen === 'ii' && (
@@ -265,12 +264,19 @@ export function HisnikApp({ initiallyAuthed }: { initiallyAuthed: boolean }) {
           }}
         />
       )}
+      {state && screen === 'iii' && (
+        <IiiMenu
+          onBack={() => setScreen('home')}
+          onReturn={() => setScreen('iii-return')}
+          onFill={() => setScreen('iii-fill')}
+        />
+      )}
       {state && screen === 'iii-return' && (
         <WeighReturn
           density={state.densityKgPerL}
           can={state.can}
           busy={pending}
-          onBack={() => setScreen('home')}
+          onBack={() => setScreen('iii')}
           onDone={(s) => {
             setState(s)
             setScreen('home')
@@ -283,7 +289,7 @@ export function HisnikApp({ initiallyAuthed }: { initiallyAuthed: boolean }) {
           stock={state.stockLitres}
           can={state.can}
           busy={pending}
-          onBack={() => setScreen('home')}
+          onBack={() => setScreen('iii')}
           onDone={(s) => {
             setState(s)
             setScreen('home')
@@ -299,15 +305,13 @@ function Home({
   busy,
   onRefresh,
   onIi,
-  onReturn,
-  onFill,
+  onIii,
 }: {
   state: HisnikState
   busy: boolean
   onRefresh: () => void
   onIi: () => void
-  onReturn: () => void
-  onFill: () => void
+  onIii: () => void
 }) {
   const { t, lang } = useLang()
   const can = state.can
@@ -344,6 +348,7 @@ function Home({
         </div>
       </section>
 
+      {/* Boat choice only — Odyssey III actions open on the next screen. */}
       <section className="grid gap-3">
         <BigButton
           icon={<Ship className="h-6 w-6" />}
@@ -353,17 +358,10 @@ function Home({
           tone="accent"
         />
         <BigButton
-          icon={<Scale className="h-6 w-6" />}
-          title={t('Odyssey III · returned can')}
-          subtitle={t('After the trip: weigh consumption (no stock change)')}
-          onClick={onReturn}
-          tone="due"
-        />
-        <BigButton
-          icon={<Droplet className="h-6 w-6" />}
-          title={t('Odyssey III · weigh + fill')}
-          subtitle={t('Morning: weigh, fill from stock, issue')}
-          onClick={onFill}
+          icon={<Ship className="h-6 w-6" />}
+          title={t('Odyssey III')}
+          subtitle={t('Portable can · daily cycle')}
+          onClick={onIii}
           tone="ok"
         />
       </section>
@@ -428,6 +426,40 @@ function Home({
             ))}
           </ul>
         )}
+      </section>
+    </div>
+  )
+}
+
+/** Odyssey III submenu: the two daily-cycle actions (after trip / morning). */
+function IiiMenu({
+  onBack,
+  onReturn,
+  onFill,
+}: {
+  onBack: () => void
+  onReturn: () => void
+  onFill: () => void
+}) {
+  const { t } = useLang()
+  return (
+    <div className="space-y-5">
+      <BackBar label={t('Odyssey III')} onBack={onBack} />
+      <section className="grid gap-3">
+        <BigButton
+          icon={<Scale className="h-6 w-6" />}
+          title={t('Odyssey III · returned can')}
+          subtitle={t('After the trip: weigh consumption (no stock change)')}
+          onClick={onReturn}
+          tone="due"
+        />
+        <BigButton
+          icon={<Droplet className="h-6 w-6" />}
+          title={t('Odyssey III · weigh + fill')}
+          subtitle={t('Morning: weigh, fill from stock, issue')}
+          onClick={onFill}
+          tone="ok"
+        />
       </section>
     </div>
   )
