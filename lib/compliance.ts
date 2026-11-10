@@ -180,7 +180,7 @@ export function expiryTone(
 //   past the date — Poteklo / Expired (red)
 //   no end date — brez roka / No expiry
 export function expiryNoticeLabel(
-  lang: 'en' | 'sl',
+  lang: 'en' | 'sl' | 'fr',
   tone: ExpiryTone,
 ): string {
   if (lang === 'sl') {
@@ -189,6 +189,12 @@ export function expiryNoticeLabel(
     if (tone === 'soon') return 'Poteče'
     return 'Preteče'
   }
+  if (lang === 'fr') {
+    if (tone === 'none') return 'sans échéance'
+    if (tone === 'expired') return 'Expiré'
+    if (tone === 'soon') return 'Expire bientôt'
+    return 'Expire'
+  }
   if (tone === 'none') return 'No expiry'
   if (tone === 'expired') return 'Expired'
   if (tone === 'soon') return 'Expiring soon'
@@ -196,7 +202,7 @@ export function expiryNoticeLabel(
 }
 
 export function expiryNoticeText(
-  lang: 'en' | 'sl',
+  lang: 'en' | 'sl' | 'fr',
   dateStr: string | null | undefined,
   days?: number | null,
 ): { tone: ExpiryTone; text: string } {
@@ -264,7 +270,8 @@ export function formatExpiryLine(
   date: string,
   days: number | null,
 ): string {
-  const lang = t('days') === 'dni' ? 'sl' : 'en'
+  const lang =
+    t('days') === 'dni' ? 'sl' : t('Language') === 'Langue' ? 'fr' : 'en'
   return expiryNoticeText(lang, date, days).text
 }
 

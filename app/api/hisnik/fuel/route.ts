@@ -10,12 +10,12 @@ import {
 import { isCaretaker } from '@/lib/caretaker-auth'
 
 function errMessage(e: unknown): string {
-  return e instanceof Error ? e.message : 'Napaka'
+  return e instanceof Error ? e.message : 'Error'
 }
 
 export async function GET() {
   if (!(await isCaretaker())) {
-    return NextResponse.json({ error: 'Ni prijave' }, { status: 401 })
+    return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
   }
   try {
     const state = await getHisnikState()
@@ -38,13 +38,13 @@ type Body =
 
 export async function POST(req: Request) {
   if (!(await isCaretaker())) {
-    return NextResponse.json({ error: 'Ni prijave' }, { status: 401 })
+    return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
   }
   let body: Body
   try {
     body = (await req.json()) as Body
   } catch {
-    return NextResponse.json({ error: 'Neveljavno telo' }, { status: 400 })
+    return NextResponse.json({ error: 'Error' }, { status: 400 })
   }
 
   try {
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
       })
       return NextResponse.json(state)
     }
-    return NextResponse.json({ error: 'Neznana akcija' }, { status: 400 })
+    return NextResponse.json({ error: 'Error' }, { status: 400 })
   } catch (e) {
     return NextResponse.json({ error: errMessage(e) }, { status: 400 })
   }

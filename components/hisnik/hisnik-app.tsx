@@ -20,38 +20,87 @@ import {
   type HisnikState,
   type HisnikUnit,
 } from '@/app/actions/hisnik-fuel'
+import { useLang } from '@/lib/i18n/context'
+import { LANGS, type Lang } from '@/lib/i18n/translations'
 import { ODYSSEY_II_CAN_L } from '@/lib/fuel-units'
 import { DUE_TONE } from '@/lib/maintenance'
 
 type Screen = 'home' | 'ii' | 'iii-return' | 'iii-fill'
 
-function fmtL(n: number) {
-  return `${(Math.round(n * 10) / 10).toLocaleString('sl-SI', { maximumFractionDigits: 1 })} L`
+function numLocale(lang: Lang) {
+  if (lang === 'sl') return 'sl-SI'
+  if (lang === 'fr') return 'fr-FR'
+  return 'en-GB'
 }
 
-function fmtKg(n: number) {
-  return `${(Math.round(n * 10) / 10).toLocaleString('sl-SI', { maximumFractionDigits: 1 })} kg`
+function fmtL(n: number, lang: Lang) {
+  return `${(Math.round(n * 10) / 10).toLocaleString(numLocale(lang), { maximumFractionDigits: 1 })} L`
 }
 
-function timeFmt(iso: string) {
-  return new Date(iso).toLocaleTimeString('sl-SI', {
+function fmtKg(n: number, lang: Lang) {
+  return `${(Math.round(n * 10) / 10).toLocaleString(numLocale(lang), { maximumFractionDigits: 1 })} kg`
+}
+
+function timeFmt(iso: string, lang: Lang) {
+  return new Date(iso).toLocaleTimeString(numLocale(lang), {
     hour: '2-digit',
     minute: '2-digit',
     timeZone: 'Indian/Antananarivo',
   })
 }
 
-function eventLabel(e: HisnikState['today'][number]): string {
-  if (e.eventType === 'issue') return `Odyssey II · izdaja`
-  if (e.eventType === 'weigh-return') return `III · vrnjena kanta`
-  if (e.eventType === 'weigh-morning') return `III · jutranje tehtanje`
-  if (e.eventType === 'fill-issue') return `III · natočeno + izdano`
-  if (e.type === 'refuel') return `Izdaja · ${e.boatLabel ?? ''}`
-  if (e.type === 'weigh') return `Tehtanje · ${e.boatLabel ?? ''}`
+/** Translate API/action error keys; keep dynamic stock suffixes as-is. */
+function terr(t: (s: string) => string, e: unknown): string {
+  const raw = e instanceof Error ? e.message : 'Error'
+  if (raw.startsWith('Not enough stock')) {
+    return `${t('Not enough stock')}${raw.slice('Not enough stock'.length)}`
+  }
+  const translated = t(raw)
+  return translated
+}
+
+function eventLabel(
+  e: HisnikState['today'][number],
+  t: (s: string) => string,
+): string {
+  if (e.eventType === 'issue') return t('Odyssey II · issue')
+  if (e.eventType === 'weigh-return') return t('III · returned can')
+  if (e.eventType === 'weigh-morning') return t('III · morning weigh')
+  if (e.eventType === 'fill-issue') return t('III · filled + issued')
+  if (e.type === 'refuel') return `${t('Issue ·')} ${e.boatLabel ?? ''}`.trim()
+  if (e.type === 'weigh') return `${t('Weigh ·')} ${e.boatLabel ?? ''}`.trim()
   return e.type
 }
 
+function LangSwitch() {
+  const { lang, setLang, t } = useLang()
+  return (
+    <div
+      className="flex items-center gap-1 rounded-lg border border-border bg-card p-0.5"
+      role="group"
+      aria-label={t('Language')}
+    >
+      {LANGS.map((l) => (
+        <button
+          key={l}
+          type="button"
+          onClick={() => setLang(l)}
+          aria-pressed={lang === l}
+          className={`min-h-9 rounded-md px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors ${
+            lang === l
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          {l.toUpperCase()}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function HisnikApp({ initiallyAuthed }: { initiallyAuthed: boolean }) {
+  const { t, lang } = useLang()
   const [authed, setAuthed] = useState(initiallyAuthed)
   const [pin, setPin] = useState('')
   const [loginErr, setLoginErr] = useState<string | null>(null)
@@ -66,7 +115,7 @@ export function HisnikApp({ initiallyAuthed }: { initiallyAuthed: boolean }) {
       setState(s)
       setLoadErr(null)
     } catch (e) {
-      setLoadErr(e instanceof Error ? e.message : 'Napaka pri branju')
+      setLoadErr(terr(t, e) || t('Could not read stock'))
     }
   }
 
@@ -75,14 +124,16 @@ export function HisnikApp({ initiallyAuthed }: { initiallyAuthed: boolean }) {
     startTransition(() => {
       void refresh()
     })
-  }, [authed])
+    // Refresh when language changes so load errors re-translate if needed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, lang])
 
   async function onLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoginErr(null)
     const res = await caretakerLogin(pin)
     if (!res.ok) {
-      setLoginErr(res.error)
+      setLoginErr(t(res.error))
       return
     }
     setAuthed(true)
@@ -102,20 +153,23 @@ export function HisnikApp({ initiallyAuthed }: { initiallyAuthed: boolean }) {
         className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5 py-10"
         style={{ paddingTop: 'max(2.5rem, env(safe-area-inset-top))' }}
       >
+        <div className="mb-8 flex justify-end">
+          <LangSwitch />
+        </div>
         <p className="flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.3em] text-accent">
           <span className="h-px w-8 bg-accent" />
-          AAM · Gorivo
+          {t('AAM · Fuel')}
         </p>
         <h1 className="mt-3 font-serif text-4xl font-medium tracking-tight text-foreground">
-          Hišnik
+          {t('Caretaker')}
         </h1>
         <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-          Vnesi PIN za izdajo in tehtanje goriva. Cene niso prikazane.
+          {t('Enter your PIN to issue and weigh fuel. Prices are not shown.')}
         </p>
         <form onSubmit={onLogin} className="mt-10 space-y-4">
           <label className="block">
             <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              PIN
+              {t('PIN')}
             </span>
             <input
               type="password"
@@ -136,11 +190,11 @@ export function HisnikApp({ initiallyAuthed }: { initiallyAuthed: boolean }) {
             type="submit"
             className="flex min-h-14 w-full items-center justify-center rounded-2xl bg-primary text-base font-semibold text-primary-foreground"
           >
-            Vstopi
+            {t('Enter')}
           </button>
         </form>
         <p className="mt-8 text-center text-xs text-muted-foreground">
-          Dodaj na začetni zaslon za uporabo kot aplikacijo.
+          {t('Add to Home Screen to use as an app.')}
         </p>
       </main>
     )
@@ -161,17 +215,20 @@ export function HisnikApp({ initiallyAuthed }: { initiallyAuthed: boolean }) {
             AAM
           </p>
           <h1 className="mt-2 font-serif text-3xl font-medium text-foreground">
-            Hišnik
+            {t('Caretaker')}
           </h1>
         </div>
-        <button
-          type="button"
-          onClick={() => void onLogout()}
-          className="flex min-h-12 min-w-12 items-center justify-center rounded-full border border-border bg-card text-muted-foreground"
-          aria-label="Odjava"
-        >
-          <LogOut className="h-5 w-5" />
-        </button>
+        <div className="flex flex-col items-end gap-2">
+          <LangSwitch />
+          <button
+            type="button"
+            onClick={() => void onLogout()}
+            className="flex min-h-12 min-w-12 items-center justify-center rounded-full border border-border bg-card text-muted-foreground"
+            aria-label={t('Sign out')}
+          >
+            <LogOut className="h-5 w-5" />
+          </button>
+        </div>
       </header>
 
       {(pending && !state) || loadErr ? (
@@ -181,7 +238,7 @@ export function HisnikApp({ initiallyAuthed }: { initiallyAuthed: boolean }) {
           ) : (
             <>
               <Loader2 className="h-5 w-5 animate-spin" />
-              Berem zalogo…
+              {t('Reading stock…')}
             </>
           )}
         </div>
@@ -252,6 +309,7 @@ function Home({
   onReturn: () => void
   onFill: () => void
 }) {
+  const { t, lang } = useLang()
   const can = state.can
   return (
     <div className="mt-6 space-y-5">
@@ -260,19 +318,20 @@ function Home({
           <div className="flex items-center gap-2 text-panel-header-foreground/55">
             <Warehouse className="h-4 w-4" />
             <span className="text-[10px] uppercase tracking-[0.22em]">
-              Zaloga skladišča
+              {t('Warehouse stock')}
             </span>
           </div>
           <p className="mt-3 font-serif text-5xl tabular-nums tracking-tight text-panel-header-foreground">
-            {fmtL(state.stockLitres)}
+            {fmtL(state.stockLitres, lang)}
           </p>
           <p className="mt-1 text-sm tabular-nums text-panel-header-foreground/55">
-            ≈ {fmtKg(state.stockKg)} · gostota {state.densityKgPerL} kg/L
+            ≈ {fmtKg(state.stockKg, lang)} · {t('density')} {state.densityKgPerL}{' '}
+            kg/L
           </p>
         </header>
         <div className="p-5">
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Skladiščne kante 20 L in 25 L — pretok v kante skiperjev.
+            {t('Warehouse cans 20 L and 25 L — poured into skipper cans.')}
           </p>
           <button
             type="button"
@@ -280,7 +339,7 @@ function Home({
             disabled={busy}
             className="mt-3 text-xs font-medium text-accent underline-offset-2 hover:underline disabled:opacity-50"
           >
-            Osveži
+            {t('Refresh')}
           </button>
         </div>
       </section>
@@ -288,22 +347,22 @@ function Home({
       <section className="grid gap-3">
         <BigButton
           icon={<Ship className="h-6 w-6" />}
-          title="Odyssey II"
-          subtitle={`Izdaj 1 ali 2 × ${ODYSSEY_II_CAN_L} L`}
+          title={t('Odyssey II')}
+          subtitle={t('Issue 1 or 2 × 25 L')}
           onClick={onIi}
           tone="accent"
         />
         <BigButton
           icon={<Scale className="h-6 w-6" />}
-          title="Odyssey III · vrnjena kanta"
-          subtitle="Po vožnji: stehtaj porabo (brez zaloge)"
+          title={t('Odyssey III · returned can')}
+          subtitle={t('After the trip: weigh consumption (no stock change)')}
           onClick={onReturn}
           tone="due"
         />
         <BigButton
           icon={<Droplet className="h-6 w-6" />}
-          title="Odyssey III · stehtaj + natoči"
-          subtitle="Zjutraj: tehtaj, natoči iz zaloge, izdaj"
+          title={t('Odyssey III · weigh + fill')}
+          subtitle={t('Morning: weigh, fill from stock, issue')}
           onClick={onFill}
           tone="ok"
         />
@@ -311,27 +370,31 @@ function Home({
 
       <section className="rounded-2xl border border-border bg-card p-5">
         <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          Prenosna kanta III
+          {t('Portable can III')}
         </p>
         <p className="mt-2 text-lg text-foreground">
-          {can.location === 'with_skipper' ? 'Pri skiperju' : 'V skladišču'}
+          {can.location === 'with_skipper' ? t('With skipper') : t('At warehouse')}
         </p>
         <p className="mt-1 text-sm tabular-nums text-muted-foreground">
           {can.lastLitres != null
-            ? `Zadnja teža / vsebina: ${fmtL(can.lastLitres)}${
-                can.lastKilograms != null ? ` · ${fmtKg(can.lastKilograms)}` : ''
+            ? `${t('Last weight / contents:')} ${fmtL(can.lastLitres, lang)}${
+                can.lastKilograms != null
+                  ? ` · ${fmtKg(can.lastKilograms, lang)}`
+                  : ''
               }`
-            : 'Še ni tehtanja'}
-          {can.issuedLitres != null ? ` · izdano ${fmtL(can.issuedLitres)}` : ''}
+            : t('No weighing yet')}
+          {can.issuedLitres != null
+            ? ` · ${t('issued')} ${fmtL(can.issuedLitres, lang)}`
+            : ''}
         </p>
       </section>
 
       <section className="rounded-2xl border border-border bg-card p-5">
         <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          Danes
+          {t('Today')}
         </p>
         {state.today.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">Še ni vnosov.</p>
+          <p className="mt-3 text-sm text-muted-foreground">{t('No entries yet.')}</p>
         ) : (
           <ul className="mt-3 divide-y divide-border">
             {state.today.map((e) => (
@@ -340,10 +403,14 @@ function Home({
                 className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm text-foreground">{eventLabel(e)}</p>
+                  <p className="truncate text-sm text-foreground">
+                    {eventLabel(e, t)}
+                  </p>
                   <p className="text-xs text-muted-foreground">
-                    {timeFmt(e.occurredAt)}
-                    {e.note ? ` · ${e.note.replace(/^Hišnik ·\s*/, '')}` : ''}
+                    {timeFmt(e.occurredAt, lang)}
+                    {e.note
+                      ? ` · ${e.note.replace(/^Hišnik ·\s*/, '').replace(/^Gardien ·\s*/, '')}`
+                      : ''}
                   </p>
                 </div>
                 <span
@@ -354,8 +421,8 @@ function Home({
                   }}
                 >
                   {e.type === 'refuel'
-                    ? `−${fmtL(Math.abs(e.litres))}`
-                    : fmtL(e.litres)}
+                    ? `−${fmtL(Math.abs(e.litres), lang)}`
+                    : fmtL(e.litres, lang)}
                 </span>
               </li>
             ))}
@@ -413,6 +480,7 @@ function BigButton({
 }
 
 function BackBar({ label, onBack }: { label: string; onBack: () => void }) {
+  const { t } = useLang()
   return (
     <div className="mt-4 flex items-center gap-3">
       <button
@@ -420,7 +488,7 @@ function BackBar({ label, onBack }: { label: string; onBack: () => void }) {
         onClick={onBack}
         className="min-h-12 rounded-full border border-border bg-card px-4 text-sm text-muted-foreground"
       >
-        Nazaj
+        {t('Back')}
       </button>
       <h2 className="font-serif text-2xl font-medium text-foreground">{label}</h2>
     </div>
@@ -434,6 +502,7 @@ function UnitToggle({
   unit: HisnikUnit
   onChange: (u: HisnikUnit) => void
 }) {
+  const { t } = useLang()
   return (
     <div className="grid grid-cols-2 gap-1.5 rounded-2xl border border-border bg-secondary/40 p-1">
       {(['litres', 'kg'] as const).map((u) => (
@@ -447,7 +516,7 @@ function UnitToggle({
               : 'text-muted-foreground hover:bg-secondary'
           }`}
         >
-          {u === 'litres' ? 'Litri' : 'Kilogrami'}
+          {u === 'litres' ? t('Litres') : t('Kilograms')}
         </button>
       ))}
     </div>
@@ -465,17 +534,18 @@ function QtyField({
   unit: HisnikUnit
   density: number
 }) {
+  const { t, lang } = useLang()
   const n = Number(value.replace(',', '.'))
   const other =
     Number.isFinite(n) && n > 0
       ? unit === 'litres'
-        ? `≈ ${fmtKg(n * density)}`
-        : `≈ ${fmtL(n / density)}`
+        ? `≈ ${fmtKg(n * density, lang)}`
+        : `≈ ${fmtL(n / density, lang)}`
       : null
   return (
     <label className="block">
       <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-        Količina ({unit === 'litres' ? 'L' : 'kg'})
+        {unit === 'litres' ? t('Quantity (L)') : t('Quantity (kg)')}
       </span>
       <input
         type="text"
@@ -503,6 +573,7 @@ function IssueIi({
   onBack: () => void
   onDone: (s: HisnikState) => void
 }) {
+  const { t, lang } = useLang()
   const [err, setErr] = useState<string | null>(null)
   const [working, setWorking] = useState(false)
 
@@ -513,7 +584,7 @@ function IssueIi({
       const s = await hisnikIssueOdysseyIi(cans)
       onDone(s)
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Napaka')
+      setErr(terr(t, e))
     } finally {
       setWorking(false)
     }
@@ -521,10 +592,10 @@ function IssueIi({
 
   return (
     <div className="space-y-5">
-      <BackBar label="Odyssey II" onBack={onBack} />
+      <BackBar label={t('Odyssey II')} onBack={onBack} />
       <p className="text-sm text-muted-foreground">
-        Na čolnu je prostor za 1 ali 2 kanti po {ODYSSEY_II_CAN_L} L. Zaloga:{' '}
-        <span className="font-semibold text-foreground">{fmtL(stock)}</span>
+        {t('The boat has room for 1 or 2 cans of 25 L. Stock:')}{' '}
+        <span className="font-semibold text-foreground">{fmtL(stock, lang)}</span>
       </p>
       <div className="grid gap-3">
         <button
@@ -536,7 +607,7 @@ function IssueIi({
           {working ? (
             <Loader2 className="h-6 w-6 animate-spin" />
           ) : (
-            `Izdaj ${ODYSSEY_II_CAN_L} L (1 kanta)`
+            t('Issue 25 L (1 can)')
           )}
         </button>
         <button
@@ -548,7 +619,7 @@ function IssueIi({
           {working ? (
             <Loader2 className="h-6 w-6 animate-spin" />
           ) : (
-            `Izdaj ${ODYSSEY_II_CAN_L * 2} L (2 kanti)`
+            t('Issue 50 L (2 cans)')
           )}
         </button>
       </div>
@@ -574,6 +645,7 @@ function WeighReturn({
   onBack: () => void
   onDone: (s: HisnikState) => void
 }) {
+  const { t, lang } = useLang()
   const [unit, setUnit] = useState<HisnikUnit>('kg')
   const [qty, setQty] = useState('')
   const [err, setErr] = useState<string | null>(null)
@@ -589,21 +661,24 @@ function WeighReturn({
       })
       onDone(s)
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Napaka')
+      setErr(terr(t, e))
     } finally {
       setWorking(false)
     }
   }
 
   const issuedHint =
-    can.issuedLitres != null ? `Izhodišče ob izdaji: ${fmtL(can.issuedLitres)}` : null
+    can.issuedLitres != null
+      ? `${t('Baseline at issue:')} ${fmtL(can.issuedLitres, lang)}`
+      : null
 
   return (
     <div className="space-y-5">
-      <BackBar label="Vrnjena kanta" onBack={onBack} />
+      <BackBar label={t('Returned can')} onBack={onBack} />
       <p className="text-sm text-muted-foreground">
-        Stehtaj kanto po vožnji. Poraba se izračuna; zaloga skladišča se ne
-        spremeni. Kanta ostane do jutri.
+        {t(
+          'Weigh the can after the trip. Consumption is calculated; warehouse stock does not change. The can stays until tomorrow.',
+        )}
       </p>
       {issuedHint && (
         <p className="text-sm font-medium" style={{ color: DUE_TONE.due.fg }}>
@@ -619,7 +694,7 @@ function WeighReturn({
         className="flex min-h-16 w-full items-center justify-center rounded-2xl text-lg font-semibold disabled:opacity-40"
         style={{ background: DUE_TONE.due.fg, color: '#132a42' }}
       >
-        {working ? <Loader2 className="h-6 w-6 animate-spin" /> : 'Shrani tehtanje'}
+        {working ? <Loader2 className="h-6 w-6 animate-spin" /> : t('Save weighing')}
       </button>
       {err && (
         <p className="text-sm" style={{ color: DUE_TONE.overdue.fg }}>
@@ -645,6 +720,7 @@ function WeighFill({
   onBack: () => void
   onDone: (s: HisnikState) => void
 }) {
+  const { t, lang } = useLang()
   const [weighUnit, setWeighUnit] = useState<HisnikUnit>('kg')
   const [fillUnit, setFillUnit] = useState<HisnikUnit>('litres')
   const [weighQty, setWeighQty] = useState(
@@ -678,7 +754,7 @@ function WeighFill({
       })
       onDone(s)
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Napaka')
+      setErr(terr(t, e))
     } finally {
       setWorking(false)
     }
@@ -686,16 +762,17 @@ function WeighFill({
 
   return (
     <div className="space-y-5">
-      <BackBar label="Natoči + izdaj" onBack={onBack} />
+      <BackBar label={t('Fill + issue')} onBack={onBack} />
       <p className="text-sm text-muted-foreground">
-        Zjutraj: spet stehtaj, natoči iz skladišča, daj skiperju. Zaloga se
-        zmanjša samo za natočene litre. Trenutna zaloga:{' '}
-        <span className="font-semibold text-foreground">{fmtL(stock)}</span>
+        {t(
+          'Morning: weigh again, fill from the warehouse, give to the skipper. Stock decreases only by the filled litres. Current stock:',
+        )}{' '}
+        <span className="font-semibold text-foreground">{fmtL(stock, lang)}</span>
       </p>
 
       <div className="space-y-3">
         <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          1. Tehtanje pred natočitvijo
+          {t('1. Weighing before fill')}
         </p>
         <UnitToggle unit={weighUnit} onChange={setWeighUnit} />
         <QtyField
@@ -708,7 +785,7 @@ function WeighFill({
 
       <div className="space-y-3">
         <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          2. Natoči iz zaloge
+          {t('2. Fill from stock')}
         </p>
         <UnitToggle unit={fillUnit} onChange={setFillUnit} />
         <QtyField
@@ -728,7 +805,7 @@ function WeighFill({
         {working ? (
           <Loader2 className="h-6 w-6 animate-spin" />
         ) : (
-          'Potrdi tehtanje, natočitev in izdajo'
+          t('Confirm weighing, fill and issue')
         )}
       </button>
       {err && (

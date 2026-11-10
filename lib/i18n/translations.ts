@@ -1,17 +1,26 @@
-// Slovenian translations keyed by the exact English source string. Anything
-// not present here falls back to the English source, so a missing entry shows
-// English text rather than a broken key. Shared by the client context and the
-// server helper so server- and client-rendered admin text translate the same.
+// Translations keyed by the exact English source string. Anything not present
+// in the active language falls back to the English source, so a missing entry
+// shows English rather than a broken key. Shared by the client context and the
+// server helper so server- and client-rendered text translate the same.
+//
+// Languages: English (source), Slovenian, French — the three AAM UI languages.
 
-export type Lang = 'en' | 'sl'
+export type Lang = 'en' | 'sl' | 'fr'
+
+export const LANGS: Lang[] = ['en', 'sl', 'fr']
 
 export const LANG_COOKIE = 'aam-admin-lang'
 
+export function isLang(v: string | null | undefined): v is Lang {
+  return v === 'en' || v === 'sl' || v === 'fr'
+}
+
 // Pure lookup shared by the client context and the server helper. English
-// returns the source unchanged; Slovenian falls back to the source when a
+// returns the source unchanged; other languages fall back to the source when a
 // phrase is not yet translated.
 export function translate(lang: Lang, s: string): string {
   if (lang === 'en') return s
+  if (lang === 'fr') return FR[s] ?? s
   return SL[s] ?? s
 }
 
@@ -888,4 +897,140 @@ export const SL: Record<string, string> = {
     'Osebni dokument, ne listina plovila. V registru ODYSSEY II je vložen kot usposobljenost lastnika/skiperja. Potrdilo o usposobljenosti Republike Južna Afrika. Imetnik: MICHAEL SCHNEIDER. Potrdilo SVC-0017212-S. ID 7409305248086. Obalni skiper do 40 navtičnih milj. Plovilo kategorije B pod 9 m. Preizkus 20. avg. 2014 (SADSAA). Datum Pretoria 28. jan. 2015.',
   'Photograph of ODYSSEY II on a trailer, registration HV 25-111 painted on the hull. Stored upright. The vessel compliance profile has no photo field, so the picture is filed here.':
     'Fotografija plovila ODYSSEY II na prikolici, registracija HV 25-111 je napisana na trupu. Shranjena pokončno. Profil skladnosti plovila nima polja za fotografijo, zato je slika vložena tukaj.',
+
+  // --- Caretaker / hisnik fuel PWA ---
+  'AAM · Fuel': 'AAM · Gorivo',
+  Caretaker: 'Hišnik',
+  'Enter your PIN to issue and weigh fuel. Prices are not shown.':
+    'Vnesi PIN za izdajo in tehtanje goriva. Cene niso prikazane.',
+  PIN: 'PIN',
+  Enter: 'Vstopi',
+  'Add to Home Screen to use as an app.':
+    'Dodaj na začetni zaslon za uporabo kot aplikacijo.',
+  'Reading stock…': 'Berem zalogo…',
+  'Warehouse stock': 'Zaloga skladišča',
+  'Warehouse cans 20 L and 25 L — poured into skipper cans.':
+    'Skladiščne kante 20 L in 25 L — pretok v kante skiperjev.',
+  Refresh: 'Osveži',
+  'Odyssey II': 'Odyssey II',
+  'Issue 1 or 2 × 25 L': 'Izdaj 1 ali 2 × 25 L',
+  'Odyssey III · returned can': 'Odyssey III · vrnjena kanta',
+  'After the trip: weigh consumption (no stock change)':
+    'Po vožnji: stehtaj porabo (brez zaloge)',
+  'Odyssey III · weigh + fill': 'Odyssey III · stehtaj + natoči',
+  'Morning: weigh, fill from stock, issue':
+    'Zjutraj: tehtaj, natoči iz zaloge, izdaj',
+  'Portable can III': 'Prenosna kanta III',
+  'With skipper': 'Pri skiperju',
+  'At warehouse': 'V skladišču',
+  'Last weight / contents:': 'Zadnja teža / vsebina:',
+  'No weighing yet': 'Še ni tehtanja',
+  issued: 'izdano',
+  Today: 'Danes',
+  'No entries yet.': 'Še ni vnosov.',
+  Back: 'Nazaj',
+  'Quantity (L)': 'Količina (L)',
+  'Quantity (kg)': 'Količina (kg)',
+  density: 'gostota',
+  'The boat has room for 1 or 2 cans of 25 L. Stock:':
+    'Na čolnu je prostor za 1 ali 2 kanti po 25 L. Zaloga:',
+  'Issue 25 L (1 can)': 'Izdaj 25 L (1 kanta)',
+  'Issue 50 L (2 cans)': 'Izdaj 50 L (2 kanti)',
+  'Returned can': 'Vrnjena kanta',
+  'Weigh the can after the trip. Consumption is calculated; warehouse stock does not change. The can stays until tomorrow.':
+    'Stehtaj kanto po vožnji. Poraba se izračuna; zaloga skladišča se ne spremeni. Kanta ostane do jutri.',
+  'Baseline at issue:': 'Izhodišče ob izdaji:',
+  'Save weighing': 'Shrani tehtanje',
+  'Fill + issue': 'Natoči + izdaj',
+  'Morning: weigh again, fill from the warehouse, give to the skipper. Stock decreases only by the filled litres. Current stock:':
+    'Zjutraj: spet stehtaj, natoči iz skladišča, daj skiperju. Zaloga se zmanjša samo za natočene litre. Trenutna zaloga:',
+  '1. Weighing before fill': '1. Tehtanje pred natočitvijo',
+  '2. Fill from stock': '2. Natoči iz zaloge',
+  'Confirm weighing, fill and issue': 'Potrdi tehtanje, natočitev in izdajo',
+  'Odyssey II · issue': 'Odyssey II · izdaja',
+  'III · returned can': 'III · vrnjena kanta',
+  'III · morning weigh': 'III · jutranje tehtanje',
+  'III · filled + issued': 'III · natočeno + izdano',
+  'Issue ·': 'Izdaja ·',
+  'Weigh ·': 'Tehtanje ·',
+  'Wrong PIN': 'Napačna koda',
+  'Not signed in': 'Ni prijave',
+  'Enter an amount': 'Vnesi količino',
+  'Enter how much you fill from stock': 'Vnesi koliko natočiš iz zaloge',
+  'Not enough stock': 'Premalo zaloge',
+  Error: 'Napaka',
+  'Could not read stock': 'Napaka pri branju',
+}
+
+/** French UI strings (same English keys as SL). Untranslated admin phrases fall back to English. */
+export const FR: Record<string, string> = {
+  Language: 'Langue',
+  Fuel: 'Carburant',
+  Caretaker: 'Gardien',
+  'AAM · Fuel': 'AAM · Carburant',
+  'Enter your PIN to issue and weigh fuel. Prices are not shown.':
+    'Entrez le PIN pour délivrer et peser le carburant. Les prix ne sont pas affichés.',
+  PIN: 'PIN',
+  Enter: 'Entrer',
+  'Add to Home Screen to use as an app.':
+    'Ajoutez à l’écran d’accueil pour l’utiliser comme application.',
+  'Sign out': 'Déconnexion',
+  'Reading stock…': 'Lecture du stock…',
+  'Warehouse stock': 'Stock d’entrepôt',
+  'Warehouse cans 20 L and 25 L — poured into skipper cans.':
+    'Bidons d’entrepôt 20 L et 25 L — versés dans les bidons du skipper.',
+  Refresh: 'Actualiser',
+  'Odyssey II': 'Odyssey II',
+  'Issue 1 or 2 × 25 L': 'Délivrer 1 ou 2 × 25 L',
+  'Odyssey III · returned can': 'Odyssey III · bidon rendu',
+  'After the trip: weigh consumption (no stock change)':
+    'Après la sortie : peser la consommation (sans toucher le stock)',
+  'Odyssey III · weigh + fill': 'Odyssey III · peser + remplir',
+  'Morning: weigh, fill from stock, issue':
+    'Le matin : peser, remplir depuis le stock, délivrer',
+  'Portable can III': 'Bidon portable III',
+  'With skipper': 'Chez le skipper',
+  'At warehouse': 'À l’entrepôt',
+  'Last weight / contents:': 'Dernier poids / contenu :',
+  'No weighing yet': 'Pas encore de pesée',
+  issued: 'délivré',
+  Today: 'Aujourd’hui',
+  'No entries yet.': 'Aucune saisie pour aujourd’hui.',
+  Back: 'Retour',
+  Litres: 'Litres',
+  Kilograms: 'Kilogrammes',
+  'Quantity (L)': 'Quantité (L)',
+  'Quantity (kg)': 'Quantité (kg)',
+  density: 'densité',
+  'The boat has room for 1 or 2 cans of 25 L. Stock:':
+    'Le bateau a de la place pour 1 ou 2 bidons de 25 L. Stock :',
+  'Issue 25 L (1 can)': 'Délivrer 25 L (1 bidon)',
+  'Issue 50 L (2 cans)': 'Délivrer 50 L (2 bidons)',
+  'Returned can': 'Bidon rendu',
+  'Weigh the can after the trip. Consumption is calculated; warehouse stock does not change. The can stays until tomorrow.':
+    'Pesez le bidon après la sortie. La consommation est calculée ; le stock d’entrepôt ne change pas. Le bidon reste jusqu’à demain.',
+  'Baseline at issue:': 'Référence à la délivrance :',
+  'Save weighing': 'Enregistrer la pesée',
+  'Fill + issue': 'Remplir + délivrer',
+  'Morning: weigh again, fill from the warehouse, give to the skipper. Stock decreases only by the filled litres. Current stock:':
+    'Le matin : pesez à nouveau, remplissez depuis l’entrepôt, donnez au skipper. Le stock diminue seulement des litres versés. Stock actuel :',
+  '1. Weighing before fill': '1. Pesée avant remplissage',
+  '2. Fill from stock': '2. Remplir depuis le stock',
+  'Confirm weighing, fill and issue': 'Confirmer pesée, remplissage et délivrance',
+  'Odyssey II · issue': 'Odyssey II · délivrance',
+  'III · returned can': 'III · bidon rendu',
+  'III · morning weigh': 'III · pesée du matin',
+  'III · filled + issued': 'III · rempli + délivré',
+  'Issue ·': 'Délivrance ·',
+  'Weigh ·': 'Pesée ·',
+  'Wrong PIN': 'PIN incorrect',
+  'Not signed in': 'Non connecté',
+  'Enter an amount': 'Entrez une quantité',
+  'Enter how much you fill from stock':
+    'Entrez combien vous versez depuis le stock',
+  'Not enough stock': 'Stock insuffisant',
+  Error: 'Erreur',
+  'Could not read stock': 'Impossible de lire le stock',
+  Save: 'Enregistrer',
+  Close: 'Fermer',
 }

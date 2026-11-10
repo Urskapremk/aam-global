@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from 'react'
 
-import { LANG_COOKIE, translate, type Lang } from './translations'
+import { isLang, LANG_COOKIE, translate, type Lang } from './translations'
 
 export type { Lang }
 
@@ -37,7 +37,7 @@ export function LanguageProvider({
   useEffect(() => {
     try {
       const stored = localStorage.getItem(LANG_COOKIE)
-      if ((stored === 'sl' || stored === 'en') && stored !== lang) {
+      if (isLang(stored) && stored !== lang) {
         setLangState(stored)
       }
     } catch {

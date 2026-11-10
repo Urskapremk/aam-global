@@ -28,7 +28,8 @@ const newId = (p: string) =>
   `${p}-${Date.now()}-${Math.random().toString(16).slice(2, 14)}`
 
 async function assertCaretaker() {
-  if (!(await isCaretaker())) throw new Error('Ni prijave')
+  // English source keys — the hisnik UI translates via the shared i18n system.
+  if (!(await isCaretaker())) throw new Error('Not signed in')
 }
 
 function stockDelta(type: string, litres: number): number {
@@ -170,7 +171,7 @@ function mapEvent(r: typeof fuelLog.$inferSelect): HisnikEvent {
 
 export async function caretakerLogin(pin: string): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!checkCaretakerPin(pin)) {
-    return { ok: false, error: 'Napačna koda' }
+    return { ok: false, error: 'Wrong PIN' }
   }
   await signInCaretaker()
   return { ok: true }
@@ -221,7 +222,7 @@ function resolveAmount(
 ): { litres: number; kilograms: number; inputUnit: HisnikUnit; inputQty: number } {
   const q = Math.abs(Number(qty))
   if (!q || !Number.isFinite(q)) {
-    throw new Error('Vnesi količino')
+    throw new Error('Enter an amount')
   }
   if (unit === 'kg') {
     const litres = round1(litresFromKg(q, density))
@@ -245,7 +246,7 @@ export async function hisnikIssueOdysseyIi(cans: 1 | 2): Promise<HisnikState> {
   const litres = n * ODYSSEY_II_CAN_L
   const stock = await getStockLitres()
   if (stock + 1e-6 < litres) {
-    throw new Error(`Premalo zaloge (${stock} L). Potrebno ${litres} L.`)
+    throw new Error(`Not enough stock (${stock} L; need ${litres} L)`)
   }
 
   await db.insert(fuelLog).values({
@@ -345,11 +346,11 @@ export async function hisnikWeighFillIssue(input: {
   const density = await getDensity()
   const weigh = resolveAmount(input.weighUnit, input.weighQty, density)
   const fill = resolveAmount(input.fillUnit, input.fillQty, density)
-  if (fill.litres <= 0) throw new Error('Vnesi koliko natočiš iz zaloge')
+  if (fill.litres <= 0) throw new Error('Enter how much you fill from stock')
 
   const stock = await getStockLitres()
   if (stock + 1e-6 < fill.litres) {
-    throw new Error(`Premalo zaloge (${stock} L). Potrebno ${fill.litres} L.`)
+    throw new Error(`Not enough stock (${stock} L; need ${fill.litres} L)`)
   }
 
   const afterLitres = round1(weigh.litres + fill.litres)

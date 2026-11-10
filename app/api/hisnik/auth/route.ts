@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   try {
     body = (await req.json()) as { pin?: string }
   } catch {
-    return NextResponse.json({ ok: false, error: 'Manjka koda' }, { status: 400 })
+    return NextResponse.json({ ok: false, error: 'Wrong PIN' }, { status: 400 })
   }
   const result = await caretakerLogin(String(body.pin ?? ''))
   if (!result.ok) {
