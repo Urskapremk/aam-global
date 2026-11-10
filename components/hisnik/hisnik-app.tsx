@@ -21,15 +21,7 @@ import {
   type HisnikUnit,
 } from '@/app/actions/hisnik-fuel'
 import { ODYSSEY_II_CAN_L } from '@/lib/fuel-units'
-
-const NAVY = '#0d2233'
-const CARD = '#143a49'
-const CARD2 = '#1a4556'
-const SAGE = '#8fae92'
-const AMBER = '#e0b877'
-const SKY = '#9ecbdd'
-const MUTED = 'rgba(255,255,255,0.55)'
-const LINE = 'rgba(255,255,255,0.12)'
+import { DUE_TONE } from '@/lib/maintenance'
 
 type Screen = 'home' | 'ii' | 'iii-return' | 'iii-fill'
 
@@ -110,21 +102,19 @@ export function HisnikApp({ initiallyAuthed }: { initiallyAuthed: boolean }) {
         className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5 py-10"
         style={{ paddingTop: 'max(2.5rem, env(safe-area-inset-top))' }}
       >
-        <p
-          className="text-[11px] uppercase tracking-[0.28em]"
-          style={{ color: MUTED }}
-        >
+        <p className="flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.3em] text-accent">
+          <span className="h-px w-8 bg-accent" />
           AAM · Gorivo
         </p>
-        <h1 className="mt-3 font-serif text-4xl tracking-tight" style={{ color: '#f4f7f5' }}>
+        <h1 className="mt-3 font-serif text-4xl font-medium tracking-tight text-foreground">
           Hišnik
         </h1>
-        <p className="mt-3 text-base leading-relaxed" style={{ color: MUTED }}>
+        <p className="mt-3 text-base leading-relaxed text-muted-foreground">
           Vnesi PIN za izdajo in tehtanje goriva. Cene niso prikazane.
         </p>
         <form onSubmit={onLogin} className="mt-10 space-y-4">
           <label className="block">
-            <span className="text-[11px] uppercase tracking-[0.18em]" style={{ color: MUTED }}>
+            <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
               PIN
             </span>
             <input
@@ -133,29 +123,23 @@ export function HisnikApp({ initiallyAuthed }: { initiallyAuthed: boolean }) {
               autoComplete="one-time-code"
               value={pin}
               onChange={(e) => setPin(e.target.value)}
-              className="mt-2 w-full rounded-2xl border px-5 py-4 text-center text-2xl tracking-[0.4em] outline-none"
-              style={{
-                background: CARD,
-                borderColor: LINE,
-                color: '#fff',
-              }}
+              className="mt-2 min-h-14 w-full rounded-2xl border border-border bg-card px-5 py-4 text-center text-2xl tracking-[0.4em] text-foreground outline-none ring-accent focus:ring-2"
               placeholder="••••"
             />
           </label>
           {loginErr && (
-            <p className="text-sm" style={{ color: '#f0a8b4' }}>
+            <p className="text-sm" style={{ color: DUE_TONE.overdue.fg }}>
               {loginErr}
             </p>
           )}
           <button
             type="submit"
-            className="flex min-h-14 w-full items-center justify-center rounded-2xl text-base font-semibold"
-            style={{ background: SAGE, color: NAVY }}
+            className="flex min-h-14 w-full items-center justify-center rounded-2xl bg-primary text-base font-semibold text-primary-foreground"
           >
             Vstopi
           </button>
         </form>
-        <p className="mt-8 text-center text-xs" style={{ color: MUTED }}>
+        <p className="mt-8 text-center text-xs text-muted-foreground">
           Dodaj na začetni zaslon za uporabo kot aplikacijo.
         </p>
       </main>
@@ -172,18 +156,18 @@ export function HisnikApp({ initiallyAuthed }: { initiallyAuthed: boolean }) {
     >
       <header className="flex items-start justify-between gap-3 pt-2">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.24em]" style={{ color: MUTED }}>
+          <p className="flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.3em] text-accent">
+            <span className="h-px w-8 bg-accent" />
             AAM
           </p>
-          <h1 className="font-serif text-3xl" style={{ color: '#f4f7f5' }}>
+          <h1 className="mt-2 font-serif text-3xl font-medium text-foreground">
             Hišnik
           </h1>
         </div>
         <button
           type="button"
           onClick={() => void onLogout()}
-          className="flex min-h-12 min-w-12 items-center justify-center rounded-full"
-          style={{ background: CARD, color: MUTED }}
+          className="flex min-h-12 min-w-12 items-center justify-center rounded-full border border-border bg-card text-muted-foreground"
           aria-label="Odjava"
         >
           <LogOut className="h-5 w-5" />
@@ -191,9 +175,9 @@ export function HisnikApp({ initiallyAuthed }: { initiallyAuthed: boolean }) {
       </header>
 
       {(pending && !state) || loadErr ? (
-        <div className="mt-10 flex items-center gap-3 text-sm" style={{ color: MUTED }}>
+        <div className="mt-10 flex items-center gap-3 text-sm text-muted-foreground">
           {loadErr ? (
-            <span style={{ color: '#f0a8b4' }}>{loadErr}</span>
+            <span style={{ color: DUE_TONE.overdue.fg }}>{loadErr}</span>
           ) : (
             <>
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -271,37 +255,34 @@ function Home({
   const can = state.can
   return (
     <div className="mt-6 space-y-5">
-      <section
-        className="overflow-hidden rounded-3xl p-5"
-        style={{
-          background: `linear-gradient(160deg, ${CARD2} 0%, ${CARD} 55%, #0f2c38 100%)`,
-          border: `1px solid ${LINE}`,
-        }}
-      >
-        <div className="flex items-center gap-2" style={{ color: MUTED }}>
-          <Warehouse className="h-4 w-4" />
-          <span className="text-[11px] uppercase tracking-[0.18em]">
-            Zaloga skladišča
-          </span>
+      <section className="overflow-hidden rounded-2xl border border-border bg-card">
+        <header className="bg-panel-header p-5">
+          <div className="flex items-center gap-2 text-panel-header-foreground/55">
+            <Warehouse className="h-4 w-4" />
+            <span className="text-[10px] uppercase tracking-[0.22em]">
+              Zaloga skladišča
+            </span>
+          </div>
+          <p className="mt-3 font-serif text-5xl tabular-nums tracking-tight text-panel-header-foreground">
+            {fmtL(state.stockLitres)}
+          </p>
+          <p className="mt-1 text-sm tabular-nums text-panel-header-foreground/55">
+            ≈ {fmtKg(state.stockKg)} · gostota {state.densityKgPerL} kg/L
+          </p>
+        </header>
+        <div className="p-5">
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Skladiščne kante 20 L in 25 L — pretok v kante skiperjev.
+          </p>
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={busy}
+            className="mt-3 text-xs font-medium text-accent underline-offset-2 hover:underline disabled:opacity-50"
+          >
+            Osveži
+          </button>
         </div>
-        <p className="mt-3 font-serif text-5xl tabular-nums tracking-tight" style={{ color: SAGE }}>
-          {fmtL(state.stockLitres)}
-        </p>
-        <p className="mt-1 text-sm tabular-nums" style={{ color: MUTED }}>
-          ≈ {fmtKg(state.stockKg)} · gostota {state.densityKgPerL} kg/L
-        </p>
-        <p className="mt-3 text-xs" style={{ color: MUTED }}>
-          Skladiščne kante 20 L in 25 L — pretok v kante skiperjev.
-        </p>
-        <button
-          type="button"
-          onClick={onRefresh}
-          disabled={busy}
-          className="mt-4 text-xs underline-offset-2 hover:underline disabled:opacity-50"
-          style={{ color: SKY }}
-        >
-          Osveži
-        </button>
       </section>
 
       <section className="grid gap-3">
@@ -310,35 +291,32 @@ function Home({
           title="Odyssey II"
           subtitle={`Izdaj 1 ali 2 × ${ODYSSEY_II_CAN_L} L`}
           onClick={onIi}
-          accent={SKY}
+          tone="accent"
         />
         <BigButton
           icon={<Scale className="h-6 w-6" />}
           title="Odyssey III · vrnjena kanta"
           subtitle="Po vožnji: stehtaj porabo (brez zaloge)"
           onClick={onReturn}
-          accent={AMBER}
+          tone="due"
         />
         <BigButton
           icon={<Droplet className="h-6 w-6" />}
           title="Odyssey III · stehtaj + natoči"
           subtitle="Zjutraj: tehtaj, natoči iz zaloge, izdaj"
           onClick={onFill}
-          accent={SAGE}
+          tone="ok"
         />
       </section>
 
-      <section
-        className="rounded-3xl p-5"
-        style={{ background: CARD, border: `1px solid ${LINE}` }}
-      >
-        <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: MUTED }}>
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
           Prenosna kanta III
         </p>
-        <p className="mt-2 text-lg" style={{ color: '#f4f7f5' }}>
+        <p className="mt-2 text-lg text-foreground">
           {can.location === 'with_skipper' ? 'Pri skiperju' : 'V skladišču'}
         </p>
-        <p className="mt-1 text-sm tabular-nums" style={{ color: MUTED }}>
+        <p className="mt-1 text-sm tabular-nums text-muted-foreground">
           {can.lastLitres != null
             ? `Zadnja teža / vsebina: ${fmtL(can.lastLitres)}${
                 can.lastKilograms != null ? ` · ${fmtKg(can.lastKilograms)}` : ''
@@ -348,26 +326,22 @@ function Home({
         </p>
       </section>
 
-      <section
-        className="rounded-3xl p-5"
-        style={{ background: CARD, border: `1px solid ${LINE}` }}
-      >
-        <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: MUTED }}>
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
           Danes
         </p>
         {state.today.length === 0 ? (
-          <p className="mt-3 text-sm" style={{ color: MUTED }}>
-            Še ni vnosov.
-          </p>
+          <p className="mt-3 text-sm text-muted-foreground">Še ni vnosov.</p>
         ) : (
-          <ul className="mt-3 space-y-3">
+          <ul className="mt-3 divide-y divide-border">
             {state.today.map((e) => (
-              <li key={e.id} className="flex items-start justify-between gap-3">
+              <li
+                key={e.id}
+                className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
+              >
                 <div className="min-w-0">
-                  <p className="truncate text-sm" style={{ color: '#f4f7f5' }}>
-                    {eventLabel(e)}
-                  </p>
-                  <p className="text-xs" style={{ color: MUTED }}>
+                  <p className="truncate text-sm text-foreground">{eventLabel(e)}</p>
+                  <p className="text-xs text-muted-foreground">
                     {timeFmt(e.occurredAt)}
                     {e.note ? ` · ${e.note.replace(/^Hišnik ·\s*/, '')}` : ''}
                   </p>
@@ -375,10 +349,13 @@ function Home({
                 <span
                   className="flex-shrink-0 text-sm font-semibold tabular-nums"
                   style={{
-                    color: e.type === 'refuel' ? AMBER : SKY,
+                    color:
+                      e.type === 'refuel' ? DUE_TONE.due.fg : DUE_TONE.soon.fg,
                   }}
                 >
-                  {e.type === 'refuel' ? `−${fmtL(Math.abs(e.litres))}` : fmtL(e.litres)}
+                  {e.type === 'refuel'
+                    ? `−${fmtL(Math.abs(e.litres))}`
+                    : fmtL(e.litres)}
                 </span>
               </li>
             ))}
@@ -394,34 +371,42 @@ function BigButton({
   title,
   subtitle,
   onClick,
-  accent,
+  tone,
 }: {
   icon: React.ReactNode
   title: string
   subtitle: string
   onClick: () => void
-  accent: string
+  tone: 'accent' | 'due' | 'ok'
 }) {
+  const color =
+    tone === 'accent'
+      ? 'var(--accent)'
+      : tone === 'due'
+        ? DUE_TONE.due.fg
+        : DUE_TONE.ok.fg
+  const bg =
+    tone === 'accent'
+      ? 'color-mix(in oklab, var(--accent) 14%, transparent)'
+      : tone === 'due'
+        ? DUE_TONE.due.bg
+        : DUE_TONE.ok.bg
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-[5.5rem] w-full items-center gap-4 rounded-3xl px-5 text-left transition-transform active:scale-[0.99]"
-      style={{ background: CARD, border: `1px solid ${LINE}` }}
+      className="flex min-h-[5.5rem] w-full items-center gap-4 rounded-2xl border border-border bg-card px-5 text-left transition-transform active:scale-[0.99]"
     >
       <span
-        className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl"
-        style={{ background: `${accent}22`, color: accent }}
+        className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl"
+        style={{ background: bg, color }}
       >
         {icon}
       </span>
       <span className="min-w-0">
-        <span className="block text-lg font-semibold" style={{ color: '#f4f7f5' }}>
-          {title}
-        </span>
-        <span className="mt-0.5 block text-sm" style={{ color: MUTED }}>
-          {subtitle}
-        </span>
+        <span className="block text-lg font-semibold text-foreground">{title}</span>
+        <span className="mt-0.5 block text-sm text-muted-foreground">{subtitle}</span>
       </span>
     </button>
   )
@@ -433,14 +418,11 @@ function BackBar({ label, onBack }: { label: string; onBack: () => void }) {
       <button
         type="button"
         onClick={onBack}
-        className="min-h-12 rounded-2xl px-4 text-sm"
-        style={{ background: CARD, color: MUTED }}
+        className="min-h-12 rounded-full border border-border bg-card px-4 text-sm text-muted-foreground"
       >
         Nazaj
       </button>
-      <h2 className="font-serif text-2xl" style={{ color: '#f4f7f5' }}>
-        {label}
-      </h2>
+      <h2 className="font-serif text-2xl font-medium text-foreground">{label}</h2>
     </div>
   )
 }
@@ -453,17 +435,17 @@ function UnitToggle({
   onChange: (u: HisnikUnit) => void
 }) {
   return (
-    <div className="grid grid-cols-2 gap-2 rounded-2xl p-1" style={{ background: CARD2 }}>
+    <div className="grid grid-cols-2 gap-1.5 rounded-2xl border border-border bg-secondary/40 p-1">
       {(['litres', 'kg'] as const).map((u) => (
         <button
           key={u}
           type="button"
           onClick={() => onChange(u)}
-          className="min-h-12 rounded-xl text-sm font-semibold"
-          style={{
-            background: unit === u ? SAGE : 'transparent',
-            color: unit === u ? NAVY : MUTED,
-          }}
+          className={`min-h-12 rounded-xl text-sm font-semibold transition-colors ${
+            unit === u
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:bg-secondary'
+          }`}
         >
           {u === 'litres' ? 'Litri' : 'Kilogrami'}
         </button>
@@ -492,7 +474,7 @@ function QtyField({
       : null
   return (
     <label className="block">
-      <span className="text-[11px] uppercase tracking-[0.18em]" style={{ color: MUTED }}>
+      <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
         Količina ({unit === 'litres' ? 'L' : 'kg'})
       </span>
       <input
@@ -500,14 +482,11 @@ function QtyField({
         inputMode="decimal"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-2 w-full rounded-2xl border px-5 py-4 text-center text-3xl tabular-nums outline-none"
-        style={{ background: CARD, borderColor: LINE, color: '#fff' }}
+        className="mt-2 min-h-14 w-full rounded-2xl border border-border bg-card px-5 py-4 text-center text-3xl tabular-nums text-foreground outline-none ring-accent focus:ring-2"
         placeholder="0"
       />
       {other && (
-        <p className="mt-2 text-center text-sm" style={{ color: MUTED }}>
-          {other}
-        </p>
+        <p className="mt-2 text-center text-sm text-muted-foreground">{other}</p>
       )}
     </label>
   )
@@ -543,32 +522,38 @@ function IssueIi({
   return (
     <div className="space-y-5">
       <BackBar label="Odyssey II" onBack={onBack} />
-      <p className="text-sm" style={{ color: MUTED }}>
+      <p className="text-sm text-muted-foreground">
         Na čolnu je prostor za 1 ali 2 kanti po {ODYSSEY_II_CAN_L} L. Zaloga:{' '}
-        <span style={{ color: SAGE }}>{fmtL(stock)}</span>
+        <span className="font-semibold text-foreground">{fmtL(stock)}</span>
       </p>
       <div className="grid gap-3">
         <button
           type="button"
           disabled={busy || working || stock < ODYSSEY_II_CAN_L}
           onClick={() => void issue(1)}
-          className="flex min-h-20 items-center justify-center rounded-3xl text-xl font-semibold disabled:opacity-40"
-          style={{ background: SKY, color: NAVY }}
+          className="flex min-h-20 items-center justify-center rounded-2xl bg-accent text-xl font-semibold text-accent-foreground disabled:opacity-40"
         >
-          {working ? <Loader2 className="h-6 w-6 animate-spin" /> : `Izdaj ${ODYSSEY_II_CAN_L} L (1 kanta)`}
+          {working ? (
+            <Loader2 className="h-6 w-6 animate-spin" />
+          ) : (
+            `Izdaj ${ODYSSEY_II_CAN_L} L (1 kanta)`
+          )}
         </button>
         <button
           type="button"
           disabled={busy || working || stock < ODYSSEY_II_CAN_L * 2}
           onClick={() => void issue(2)}
-          className="flex min-h-20 items-center justify-center rounded-3xl text-xl font-semibold disabled:opacity-40"
-          style={{ background: SAGE, color: NAVY }}
+          className="flex min-h-20 items-center justify-center rounded-2xl bg-primary text-xl font-semibold text-primary-foreground disabled:opacity-40"
         >
-          {working ? <Loader2 className="h-6 w-6 animate-spin" /> : `Izdaj ${ODYSSEY_II_CAN_L * 2} L (2 kanti)`}
+          {working ? (
+            <Loader2 className="h-6 w-6 animate-spin" />
+          ) : (
+            `Izdaj ${ODYSSEY_II_CAN_L * 2} L (2 kanti)`
+          )}
         </button>
       </div>
       {err && (
-        <p className="text-sm" style={{ color: '#f0a8b4' }}>
+        <p className="text-sm" style={{ color: DUE_TONE.overdue.fg }}>
           {err}
         </p>
       )}
@@ -616,12 +601,12 @@ function WeighReturn({
   return (
     <div className="space-y-5">
       <BackBar label="Vrnjena kanta" onBack={onBack} />
-      <p className="text-sm" style={{ color: MUTED }}>
+      <p className="text-sm text-muted-foreground">
         Stehtaj kanto po vožnji. Poraba se izračuna; zaloga skladišča se ne
         spremeni. Kanta ostane do jutri.
       </p>
       {issuedHint && (
-        <p className="text-sm" style={{ color: AMBER }}>
+        <p className="text-sm font-medium" style={{ color: DUE_TONE.due.fg }}>
           {issuedHint}
         </p>
       )}
@@ -631,13 +616,13 @@ function WeighReturn({
         type="button"
         disabled={busy || working || !qty}
         onClick={() => void submit()}
-        className="flex min-h-16 w-full items-center justify-center rounded-3xl text-lg font-semibold disabled:opacity-40"
-        style={{ background: AMBER, color: NAVY }}
+        className="flex min-h-16 w-full items-center justify-center rounded-2xl text-lg font-semibold disabled:opacity-40"
+        style={{ background: DUE_TONE.due.fg, color: '#132a42' }}
       >
         {working ? <Loader2 className="h-6 w-6 animate-spin" /> : 'Shrani tehtanje'}
       </button>
       {err && (
-        <p className="text-sm" style={{ color: '#f0a8b4' }}>
+        <p className="text-sm" style={{ color: DUE_TONE.overdue.fg }}>
           {err}
         </p>
       )}
@@ -671,7 +656,6 @@ function WeighFill({
   const [err, setErr] = useState<string | null>(null)
   const [working, setWorking] = useState(false)
 
-  // Prefer kg for prefill when last kilograms exist.
   useEffect(() => {
     if (can.lastKilograms != null && can.location === 'at_warehouse') {
       setWeighUnit('kg')
@@ -703,14 +687,14 @@ function WeighFill({
   return (
     <div className="space-y-5">
       <BackBar label="Natoči + izdaj" onBack={onBack} />
-      <p className="text-sm" style={{ color: MUTED }}>
+      <p className="text-sm text-muted-foreground">
         Zjutraj: spet stehtaj, natoči iz skladišča, daj skiperju. Zaloga se
         zmanjša samo za natočene litre. Trenutna zaloga:{' '}
-        <span style={{ color: SAGE }}>{fmtL(stock)}</span>
+        <span className="font-semibold text-foreground">{fmtL(stock)}</span>
       </p>
 
       <div className="space-y-3">
-        <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: MUTED }}>
+        <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
           1. Tehtanje pred natočitvijo
         </p>
         <UnitToggle unit={weighUnit} onChange={setWeighUnit} />
@@ -723,7 +707,7 @@ function WeighFill({
       </div>
 
       <div className="space-y-3">
-        <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: MUTED }}>
+        <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
           2. Natoči iz zaloge
         </p>
         <UnitToggle unit={fillUnit} onChange={setFillUnit} />
@@ -739,8 +723,7 @@ function WeighFill({
         type="button"
         disabled={busy || working || !weighQty || !fillQty}
         onClick={() => void submit()}
-        className="flex min-h-16 w-full items-center justify-center rounded-3xl text-lg font-semibold disabled:opacity-40"
-        style={{ background: SAGE, color: NAVY }}
+        className="flex min-h-16 w-full items-center justify-center rounded-2xl bg-primary text-lg font-semibold text-primary-foreground disabled:opacity-40"
       >
         {working ? (
           <Loader2 className="h-6 w-6 animate-spin" />
@@ -749,7 +732,7 @@ function WeighFill({
         )}
       </button>
       {err && (
-        <p className="text-sm" style={{ color: '#f0a8b4' }}>
+        <p className="text-sm" style={{ color: DUE_TONE.overdue.fg }}>
           {err}
         </p>
       )}

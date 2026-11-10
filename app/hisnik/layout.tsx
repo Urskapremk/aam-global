@@ -8,16 +8,22 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: 'Hišnik',
-    statusBarStyle: 'black-translucent',
+    statusBarStyle: 'default',
   },
 }
 
 export const viewport: Viewport = {
-  colorScheme: 'dark',
-  themeColor: '#0d2233',
+  // Light like the main AAM admin, with a deeper navy theme tint for caretaker.
+  colorScheme: 'light',
+  themeColor: '#132a42',
   viewportFit: 'cover',
 }
 
+/**
+ * Caretaker shell: same AAM token family as the main app, but `--primary` /
+ * `--panel-header` are shifted to a darker ocean navy so /hisnik reads as
+ * related yet distinct from admin.
+ */
 export default function HisnikLayout({
   children,
 }: {
@@ -25,12 +31,19 @@ export default function HisnikLayout({
 }) {
   return (
     <div
-      className="min-h-dvh text-white antialiased"
-      style={{
-        background: '#0d2233',
-        // Keep cart drawer / public chrome from feeling like part of this tool.
-        isolation: 'isolate',
-      }}
+      className="hisnik-shell min-h-dvh bg-background text-foreground antialiased"
+      style={
+        {
+          // Main app navy is oklch(0.36 0.07 248) ≈ #1b4060. Caretaker sits
+          // darker so headers / CTAs don't collide with admin chrome.
+          ['--primary' as string]: 'oklch(0.26 0.065 248)',
+          ['--primary-foreground' as string]: 'oklch(0.99 0.004 240)',
+          ['--panel-header' as string]: 'oklch(0.26 0.065 248)',
+          ['--panel-header-hover' as string]: 'oklch(0.31 0.065 248)',
+          ['--panel-header-foreground' as string]: 'oklch(0.97 0.005 240)',
+          isolation: 'isolate',
+        } as React.CSSProperties
+      }
     >
       {children}
     </div>

@@ -9,8 +9,9 @@ export function GET() {
     scope: '/hisnik',
     display: 'standalone',
     orientation: 'portrait',
-    background_color: '#0d2233',
-    theme_color: '#0d2233',
+    // Darker caretaker navy (matches /hisnik layout themeColor).
+    background_color: '#132a42',
+    theme_color: '#132a42',
     lang: 'sl',
     icons: [
       {
