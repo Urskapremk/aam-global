@@ -1,6 +1,6 @@
 'use server'
 
-import { and, desc, eq, gte, isNull } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, isNull } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 
 import {
@@ -11,7 +11,7 @@ import {
 } from '@/lib/caretaker-auth'
 import { boatName } from '@/lib/boats'
 import { db } from '@/lib/db'
-import { caretakerCans, fuelConfig, fuelLog } from '@/lib/db/schema'
+import { captains, caretakerCans, fuelConfig, fuelLog } from '@/lib/db/schema'
 import { ensureHisnikSchema } from '@/lib/hisnik-schema'
 import {
   DEFAULT_DENSITY_KG_PER_L,
@@ -23,12 +23,13 @@ import {
 } from '@/lib/fuel-units'
 
 const LODGE_OFFSET_MS = 3 * 60 * 60 * 1000
+/** Canonical actor name written into fuel_log (lodge primary language). */
+const LOGGED_BY = 'Skladiščnik'
 
 const newId = (p: string) =>
   `${p}-${Date.now()}-${Math.random().toString(16).slice(2, 14)}`
 
 async function assertCaretaker() {
-  // English source keys — the hisnik UI translates via the shared i18n system.
   if (!(await isCaretaker())) throw new Error('Not signed in')
 }
 
@@ -57,7 +58,6 @@ async function getStockLitres(): Promise<number> {
 }
 
 function lodgeDayStart(): Date {
-  // Lodge-local midnight as a UTC Date, matching fuel month logic (UTC+3).
   const shifted = new Date(Date.now() + LODGE_OFFSET_MS)
   const y = shifted.getUTCFullYear()
   const m = shifted.getUTCMonth()
@@ -66,6 +66,11 @@ function lodgeDayStart(): Date {
 }
 
 export type HisnikUnit = 'litres' | 'kg'
+
+export type HisnikSkipper = {
+  id: string
+  name: string
+}
 
 export type HisnikCanState = {
   id: string
@@ -100,10 +105,38 @@ export type HisnikState = {
   stockKg: number
   densityKgPerL: number
   can: HisnikCanState
+  skippers: HisnikSkipper[]
   today: HisnikEvent[]
 }
 
 const III_CAN_ID = 'can-odyssey-iii'
+
+async function listActiveSkippers(): Promise<HisnikSkipper[]> {
+  const rows = await db
+    .select({ id: captains.id, name: captains.name })
+    .from(captains)
+    .where(eq(captains.active, true))
+    .orderBy(asc(captains.name))
+  return rows.map((r) => ({ id: r.id, name: r.name }))
+}
+
+async function resolveSkipper(input: {
+  skipperId?: string | null
+  skipperName?: string | null
+}): Promise<HisnikSkipper> {
+  const id = input.skipperId?.trim() || ''
+  if (id) {
+    const [row] = await db
+      .select({ id: captains.id, name: captains.name })
+      .from(captains)
+      .where(eq(captains.id, id))
+      .limit(1)
+    if (row) return { id: row.id, name: row.name }
+  }
+  const name = input.skipperName?.trim() || ''
+  if (name) return { id: '', name }
+  throw new Error('Select a skipper')
+}
 
 async function getOrCreateIiiCan() {
   const [existing] = await db
@@ -169,7 +202,9 @@ function mapEvent(r: typeof fuelLog.$inferSelect): HisnikEvent {
   }
 }
 
-export async function caretakerLogin(pin: string): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function caretakerLogin(
+  pin: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!checkCaretakerPin(pin)) {
     return { ok: false, error: 'Wrong PIN' }
   }
@@ -189,10 +224,11 @@ export async function getHisnikState(): Promise<HisnikState> {
   await assertCaretaker()
   await ensureHisnikSchema()
 
-  const [density, stockLitres, can, todayRows] = await Promise.all([
+  const [density, stockLitres, can, skippers, todayRows] = await Promise.all([
     getDensity(),
     getStockLitres(),
     getOrCreateIiiCan(),
+    listActiveSkippers(),
     db
       .select()
       .from(fuelLog)
@@ -211,6 +247,7 @@ export async function getHisnikState(): Promise<HisnikState> {
     stockKg: round1(kgFromLitres(stockLitres, density)),
     densityKgPerL: density,
     can: mapCan(can),
+    skippers,
     today: todayRows.map(mapEvent),
   }
 }
@@ -237,32 +274,65 @@ function resolveAmount(
   }
 }
 
-/** Odyssey II: issue 1 or 2 × 25 L cans from warehouse stock. */
-export async function hisnikIssueOdysseyIi(cans: 1 | 2): Promise<HisnikState> {
+/**
+ * Odyssey II: select cans + skipper + weigh, then issue.
+ * Stock decreases by 25/50 L (can size); weigh is always recorded.
+ */
+export async function hisnikIssueOdysseyIi(input: {
+  cans: 1 | 2
+  skipperId?: string | null
+  skipperName?: string | null
+  weighUnit: HisnikUnit
+  weighQty: number
+}): Promise<HisnikState> {
   await assertCaretaker()
   await ensureHisnikSchema()
 
-  const n = cans === 2 ? 2 : 1
+  const n = input.cans === 2 ? 2 : 1
   const litres = n * ODYSSEY_II_CAN_L
   const stock = await getStockLitres()
   if (stock + 1e-6 < litres) {
     throw new Error(`Not enough stock (${stock} L; need ${litres} L)`)
   }
 
-  await db.insert(fuelLog).values({
-    id: newId('fuel'),
-    type: 'refuel',
-    litres,
-    inputUnit: 'cans',
-    inputQty: n,
-    canSizeL: ODYSSEY_II_CAN_L,
-    boat: 'odyssey-ii',
-    costAr: null,
-    note: `Hišnik · Odyssey II · ${n}×${ODYSSEY_II_CAN_L} L`,
-    loggedBy: 'Hišnik',
-    source: 'caretaker',
-    eventType: 'issue',
-    occurredAt: new Date(),
+  const skipper = await resolveSkipper(input)
+  const density = await getDensity()
+  const weigh = resolveAmount(input.weighUnit, input.weighQty, density)
+  const now = new Date()
+
+  await db.transaction(async (tx) => {
+    // Weigh of what is handed over (required on every issue).
+    await tx.insert(fuelLog).values({
+      id: newId('fuel'),
+      type: 'weigh',
+      litres: weigh.litres,
+      inputUnit: weigh.inputUnit,
+      inputQty: weigh.inputQty,
+      canSizeL: null,
+      boat: 'odyssey-ii',
+      costAr: null,
+      note: `${LOGGED_BY} · tehtanje pred izdajo · ${weigh.litres} L (${weigh.kilograms} kg) · ${skipper.name}`,
+      loggedBy: LOGGED_BY,
+      source: 'caretaker',
+      eventType: 'issue-weigh',
+      occurredAt: now,
+    })
+    // Warehouse stock − cans.
+    await tx.insert(fuelLog).values({
+      id: newId('fuel'),
+      type: 'refuel',
+      litres,
+      inputUnit: 'cans',
+      inputQty: n,
+      canSizeL: ODYSSEY_II_CAN_L,
+      boat: 'odyssey-ii',
+      costAr: null,
+      note: `${LOGGED_BY} · Odyssey II · ${n}×${ODYSSEY_II_CAN_L} L → ${skipper.name}`,
+      loggedBy: LOGGED_BY,
+      source: 'caretaker',
+      eventType: 'issue',
+      occurredAt: new Date(now.getTime() + 1000),
+    })
   })
 
   revalidatePath('/admin/fuel')
@@ -272,25 +342,29 @@ export async function hisnikIssueOdysseyIi(cans: 1 | 2): Promise<HisnikState> {
 }
 
 /**
- * After trip: skipper returns the portable can. Weigh → record consumption.
+ * After trip: skipper returns the portable can. Weigh required (receive).
  * Can stays at warehouse until next-day fill. No warehouse stock change.
  */
 export async function hisnikWeighReturn(input: {
   unit: HisnikUnit
   qty: number
+  skipperId?: string | null
+  skipperName?: string | null
 }): Promise<HisnikState> {
   await assertCaretaker()
   await ensureHisnikSchema()
 
   const density = await getDensity()
   const amount = resolveAmount(input.unit, input.qty, density)
+  const skipper = await resolveSkipper(input)
   const can = await getOrCreateIiiCan()
   const issued = can.issuedLitres
   const used =
     issued != null ? round1(Math.max(0, issued - amount.litres)) : null
 
   const noteParts = [
-    'Hišnik · vrnjena kanta',
+    `${LOGGED_BY} · vrnjena kanta`,
+    skipper.name,
     `ostanek ${amount.litres} L (${amount.kilograms} kg)`,
   ]
   if (used != null) noteParts.push(`poraba ${used} L`)
@@ -307,7 +381,7 @@ export async function hisnikWeighReturn(input: {
       boat: 'odyssey-iii',
       costAr: null,
       note: noteParts.join(' · '),
-      loggedBy: 'Hišnik',
+      loggedBy: LOGGED_BY,
       source: 'caretaker',
       eventType: 'weigh-return',
       occurredAt: now,
@@ -331,7 +405,7 @@ export async function hisnikWeighReturn(input: {
 }
 
 /**
- * Next day: weigh remaining, fill from warehouse, hand to skipper.
+ * Next day: weigh remaining, fill from warehouse (weighed), hand to skipper.
  * Stock decreases only by the filled litres.
  */
 export async function hisnikWeighFillIssue(input: {
@@ -339,6 +413,8 @@ export async function hisnikWeighFillIssue(input: {
   weighQty: number
   fillUnit: HisnikUnit
   fillQty: number
+  skipperId?: string | null
+  skipperName?: string | null
 }): Promise<HisnikState> {
   await assertCaretaker()
   await ensureHisnikSchema()
@@ -347,6 +423,7 @@ export async function hisnikWeighFillIssue(input: {
   const weigh = resolveAmount(input.weighUnit, input.weighQty, density)
   const fill = resolveAmount(input.fillUnit, input.fillQty, density)
   if (fill.litres <= 0) throw new Error('Enter how much you fill from stock')
+  const skipper = await resolveSkipper(input)
 
   const stock = await getStockLitres()
   if (stock + 1e-6 < fill.litres) {
@@ -358,7 +435,7 @@ export async function hisnikWeighFillIssue(input: {
   const now = new Date()
 
   await db.transaction(async (tx) => {
-    // Morning weigh — no stock change.
+    // Morning weigh of remaining content (receive/check) — no stock change.
     await tx.insert(fuelLog).values({
       id: newId('fuel'),
       type: 'weigh',
@@ -368,13 +445,13 @@ export async function hisnikWeighFillIssue(input: {
       canSizeL: null,
       boat: 'odyssey-iii',
       costAr: null,
-      note: `Hišnik · jutranje tehtanje · ${weigh.litres} L (${weigh.kilograms} kg)`,
-      loggedBy: 'Hišnik',
+      note: `${LOGGED_BY} · jutranje tehtanje · ${weigh.litres} L (${weigh.kilograms} kg)`,
+      loggedBy: LOGGED_BY,
       source: 'caretaker',
       eventType: 'weigh-morning',
       occurredAt: now,
     })
-    // Fill from warehouse → stock −fill.
+    // Fill from warehouse → stock −fill (issue, weighed amount).
     await tx.insert(fuelLog).values({
       id: newId('fuel'),
       type: 'refuel',
@@ -384,8 +461,8 @@ export async function hisnikWeighFillIssue(input: {
       canSizeL: null,
       boat: 'odyssey-iii',
       costAr: null,
-      note: `Hišnik · natočeno iz zaloge · ${fill.litres} L → skupaj ${afterLitres} L`,
-      loggedBy: 'Hišnik',
+      note: `${LOGGED_BY} · natočeno iz zaloge · ${fill.litres} L (${fill.kilograms} kg) → skupaj ${afterLitres} L · ${skipper.name}`,
+      loggedBy: LOGGED_BY,
       source: 'caretaker',
       eventType: 'fill-issue',
       occurredAt: new Date(now.getTime() + 1000),

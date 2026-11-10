@@ -13,6 +13,10 @@ function errMessage(e: unknown): string {
   return e instanceof Error ? e.message : 'Error'
 }
 
+function unitOf(v: unknown): HisnikUnit {
+  return v === 'kg' ? 'kg' : 'litres'
+}
+
 export async function GET() {
   if (!(await isCaretaker())) {
     return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
@@ -26,14 +30,29 @@ export async function GET() {
 }
 
 type Body =
-  | { action: 'issue-ii'; cans: 1 | 2 }
-  | { action: 'weigh-return'; unit: HisnikUnit; qty: number }
+  | {
+      action: 'issue-ii'
+      cans: 1 | 2
+      skipperId?: string
+      skipperName?: string
+      weighUnit: HisnikUnit
+      weighQty: number
+    }
+  | {
+      action: 'weigh-return'
+      unit: HisnikUnit
+      qty: number
+      skipperId?: string
+      skipperName?: string
+    }
   | {
       action: 'weigh-fill-issue'
       weighUnit: HisnikUnit
       weighQty: number
       fillUnit: HisnikUnit
       fillQty: number
+      skipperId?: string
+      skipperName?: string
     }
 
 export async function POST(req: Request) {
@@ -50,22 +69,32 @@ export async function POST(req: Request) {
   try {
     if (body.action === 'issue-ii') {
       const cans = body.cans === 2 ? 2 : 1
-      const state = await hisnikIssueOdysseyIi(cans)
+      const state = await hisnikIssueOdysseyIi({
+        cans,
+        skipperId: body.skipperId,
+        skipperName: body.skipperName,
+        weighUnit: unitOf(body.weighUnit),
+        weighQty: Number(body.weighQty),
+      })
       return NextResponse.json(state)
     }
     if (body.action === 'weigh-return') {
       const state = await hisnikWeighReturn({
-        unit: body.unit === 'kg' ? 'kg' : 'litres',
+        unit: unitOf(body.unit),
         qty: Number(body.qty),
+        skipperId: body.skipperId,
+        skipperName: body.skipperName,
       })
       return NextResponse.json(state)
     }
     if (body.action === 'weigh-fill-issue') {
       const state = await hisnikWeighFillIssue({
-        weighUnit: body.weighUnit === 'kg' ? 'kg' : 'litres',
+        weighUnit: unitOf(body.weighUnit),
         weighQty: Number(body.weighQty),
-        fillUnit: body.fillUnit === 'kg' ? 'kg' : 'litres',
+        fillUnit: unitOf(body.fillUnit),
         fillQty: Number(body.fillQty),
+        skipperId: body.skipperId,
+        skipperName: body.skipperName,
       })
       return NextResponse.json(state)
     }

@@ -898,9 +898,10 @@ export const SL: Record<string, string> = {
   'Photograph of ODYSSEY II on a trailer, registration HV 25-111 painted on the hull. Stored upright. The vessel compliance profile has no photo field, so the picture is filed here.':
     'Fotografija plovila ODYSSEY II na prikolici, registracija HV 25-111 je napisana na trupu. Shranjena pokončno. Profil skladnosti plovila nima polja za fotografijo, zato je slika vložena tukaj.',
 
-  // --- Caretaker / hisnik fuel PWA ---
+  // --- Storekeeper / hisnik fuel PWA ---
   'AAM · Fuel': 'AAM · Gorivo',
-  Caretaker: 'Hišnik',
+  Storekeeper: 'Skladiščnik',
+  Caretaker: 'Skladiščnik',
   'Enter your PIN to issue and weigh fuel. Prices are not shown.':
     'Vnesi PIN za izdajo in tehtanje goriva. Cene niso prikazane.',
   PIN: 'PIN',
@@ -938,6 +939,15 @@ export const SL: Record<string, string> = {
     'Na čolnu je prostor za 1 ali 2 kanti po 25 L. Zaloga:',
   'Issue 25 L (1 can)': 'Izdaj 25 L (1 kanta)',
   'Issue 50 L (2 cans)': 'Izdaj 50 L (2 kanti)',
+  '1 can (25 L)': '1 kanta (25 L)',
+  '2 cans (50 L)': '2 kanti (50 L)',
+  Skipper: 'Skiper',
+  'Select a skipper': 'Izberi skiperja',
+  'No skippers yet — add captains in admin, or type a name.':
+    'Še ni skiperjev — dodaj kapitane v adminu ali vpiši ime.',
+  'Skipper name': 'Ime skiperja',
+  'Weighed amount': 'Stehtana količina',
+  'Confirm issue': 'Potrdi izdajo',
   'Returned can': 'Vrnjena kanta',
   'Weigh the can after the trip. Consumption is calculated; warehouse stock does not change. The can stays until tomorrow.':
     'Stehtaj kanto po vožnji. Poraba se izračuna; zaloga skladišča se ne spremeni. Kanta ostane do jutri.',
@@ -968,7 +978,8 @@ export const SL: Record<string, string> = {
 export const FR: Record<string, string> = {
   Language: 'Langue',
   Fuel: 'Carburant',
-  Caretaker: 'Gardien',
+  Storekeeper: 'Magasinier',
+  Caretaker: 'Magasinier',
   'AAM · Fuel': 'AAM · Carburant',
   'Enter your PIN to issue and weigh fuel. Prices are not shown.':
     'Entrez le PIN pour délivrer et peser le carburant. Les prix ne sont pas affichés.',
@@ -1010,6 +1021,15 @@ export const FR: Record<string, string> = {
     'Le bateau a de la place pour 1 ou 2 bidons de 25 L. Stock :',
   'Issue 25 L (1 can)': 'Délivrer 25 L (1 bidon)',
   'Issue 50 L (2 cans)': 'Délivrer 50 L (2 bidons)',
+  '1 can (25 L)': '1 bidon (25 L)',
+  '2 cans (50 L)': '2 bidons (50 L)',
+  Skipper: 'Skipper',
+  'Select a skipper': 'Choisir un skipper',
+  'No skippers yet — add captains in admin, or type a name.':
+    'Pas encore de skippers — ajoutez des capitaines dans l’admin, ou saisissez un nom.',
+  'Skipper name': 'Nom du skipper',
+  'Weighed amount': 'Quantité pesée',
+  'Confirm issue': 'Confirmer la délivrance',
   'Returned can': 'Bidon rendu',
   'Weigh the can after the trip. Consumption is calculated; warehouse stock does not change. The can stays until tomorrow.':
     'Pesez le bidon après la sortie. La consommation est calculée ; le stock d’entrepôt ne change pas. Le bidon reste jusqu’à demain.',

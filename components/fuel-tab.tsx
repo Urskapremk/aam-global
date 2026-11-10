@@ -1340,7 +1340,7 @@ function LedgerRow({
               {kindLabel}
               {caretaker && (
                 <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-accent">
-                  {t('Caretaker')}
+                  {t('Storekeeper')}
                 </span>
               )}
             </span>
@@ -1408,7 +1408,7 @@ function LedgerRow({
 
           <dt className="text-muted-foreground">{t('Source')}</dt>
           <dd className="text-foreground">
-            {caretaker ? t('Caretaker') : t('Admin')}
+            {caretaker ? t('Storekeeper') : t('Admin')}
             {entry.eventType ? ` · ${entry.eventType}` : ''}
           </dd>
 

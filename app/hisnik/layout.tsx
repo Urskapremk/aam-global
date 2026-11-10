@@ -1,13 +1,13 @@
 import type { Metadata, Viewport } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Hišnik — Gorivo',
-  description: 'AAM hišnik: izdaja in tehtanje goriva (Odyssey II / III).',
+  title: 'Skladiščnik — Gorivo',
+  description: 'AAM skladiščnik: izdaja in tehtanje goriva (Odyssey II / III).',
   robots: { index: false, follow: false },
   manifest: '/hisnik/manifest.webmanifest',
   appleWebApp: {
     capable: true,
-    title: 'Hišnik',
+    title: 'Skladiščnik',
     statusBarStyle: 'default',
   },
 }

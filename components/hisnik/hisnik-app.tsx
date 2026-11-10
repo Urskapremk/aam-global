@@ -17,6 +17,7 @@ import {
   hisnikIssueOdysseyIi,
   hisnikWeighFillIssue,
   hisnikWeighReturn,
+  type HisnikSkipper,
   type HisnikState,
   type HisnikUnit,
 } from '@/app/actions/hisnik-fuel'
@@ -55,8 +56,7 @@ function terr(t: (s: string) => string, e: unknown): string {
   if (raw.startsWith('Not enough stock')) {
     return `${t('Not enough stock')}${raw.slice('Not enough stock'.length)}`
   }
-  const translated = t(raw)
-  return translated
+  return t(raw)
 }
 
 function eventLabel(
@@ -161,7 +161,7 @@ export function HisnikApp({ initiallyAuthed }: { initiallyAuthed: boolean }) {
           {t('AAM · Fuel')}
         </p>
         <h1 className="mt-3 font-serif text-4xl font-medium tracking-tight text-foreground">
-          {t('Caretaker')}
+          {t('Storekeeper')}
         </h1>
         <p className="mt-3 text-base leading-relaxed text-muted-foreground">
           {t('Enter your PIN to issue and weigh fuel. Prices are not shown.')}
@@ -215,7 +215,7 @@ export function HisnikApp({ initiallyAuthed }: { initiallyAuthed: boolean }) {
             AAM
           </p>
           <h1 className="mt-2 font-serif text-3xl font-medium text-foreground">
-            {t('Caretaker')}
+            {t('Storekeeper')}
           </h1>
         </div>
         <div className="flex flex-col items-end gap-2">
@@ -256,6 +256,8 @@ export function HisnikApp({ initiallyAuthed }: { initiallyAuthed: boolean }) {
       {state && screen === 'ii' && (
         <IssueIi
           stock={state.stockLitres}
+          density={state.densityKgPerL}
+          skippers={state.skippers}
           busy={pending}
           onBack={() => setScreen('home')}
           onDone={(s) => {
@@ -275,6 +277,7 @@ export function HisnikApp({ initiallyAuthed }: { initiallyAuthed: boolean }) {
         <WeighReturn
           density={state.densityKgPerL}
           can={state.can}
+          skippers={state.skippers}
           busy={pending}
           onBack={() => setScreen('iii')}
           onDone={(s) => {
@@ -288,6 +291,7 @@ export function HisnikApp({ initiallyAuthed }: { initiallyAuthed: boolean }) {
           density={state.densityKgPerL}
           stock={state.stockLitres}
           can={state.can}
+          skippers={state.skippers}
           busy={pending}
           onBack={() => setScreen('iii')}
           onDone={(s) => {
@@ -407,7 +411,11 @@ function Home({
                   <p className="text-xs text-muted-foreground">
                     {timeFmt(e.occurredAt, lang)}
                     {e.note
-                      ? ` · ${e.note.replace(/^Hišnik ·\s*/, '').replace(/^Gardien ·\s*/, '')}`
+                      ? ` · ${e.note
+                          .replace(/^Hišnik ·\s*/, '')
+                          .replace(/^Skladiščnik ·\s*/, '')
+                          .replace(/^Gardien ·\s*/, '')
+                          .replace(/^Magasinier ·\s*/, '')}`
                       : ''}
                   </p>
                 </div>
@@ -560,11 +568,13 @@ function QtyField({
   onChange,
   unit,
   density,
+  label,
 }: {
   value: string
   onChange: (v: string) => void
   unit: HisnikUnit
   density: number
+  label?: string
 }) {
   const { t, lang } = useLang()
   const n = Number(value.replace(',', '.'))
@@ -577,7 +587,8 @@ function QtyField({
   return (
     <label className="block">
       <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-        {unit === 'litres' ? t('Quantity (L)') : t('Quantity (kg)')}
+        {label ??
+          (unit === 'litres' ? t('Quantity (L)') : t('Quantity (kg)'))}
       </span>
       <input
         type="text"
@@ -594,26 +605,100 @@ function QtyField({
   )
 }
 
+function SkipperPicker({
+  skippers,
+  skipperId,
+  skipperName,
+  onSelectId,
+  onName,
+}: {
+  skippers: HisnikSkipper[]
+  skipperId: string
+  skipperName: string
+  onSelectId: (id: string) => void
+  onName: (name: string) => void
+}) {
+  const { t } = useLang()
+  return (
+    <div className="space-y-2">
+      <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        {t('Skipper')}
+      </p>
+      {skippers.length > 0 ? (
+        <div className="grid gap-2">
+          {skippers.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => onSelectId(s.id)}
+              className={`min-h-14 rounded-2xl border px-4 text-left text-base font-semibold transition-colors ${
+                skipperId === s.id
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border bg-card text-foreground'
+              }`}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          {t('No skippers yet — add captains in admin, or type a name.')}
+        </p>
+      )}
+      {!skipperId && (
+        <input
+          type="text"
+          value={skipperName}
+          onChange={(e) => onName(e.target.value)}
+          placeholder={t('Skipper name')}
+          className="min-h-12 w-full rounded-2xl border border-border bg-card px-4 text-base text-foreground outline-none ring-accent focus:ring-2"
+        />
+      )}
+    </div>
+  )
+}
+
 function IssueIi({
   stock,
+  density,
+  skippers,
   busy,
   onBack,
   onDone,
 }: {
   stock: number
+  density: number
+  skippers: HisnikSkipper[]
   busy: boolean
   onBack: () => void
   onDone: (s: HisnikState) => void
 }) {
   const { t, lang } = useLang()
+  const [cans, setCans] = useState<1 | 2>(1)
+  const [skipperId, setSkipperId] = useState('')
+  const [skipperName, setSkipperName] = useState('')
+  const [weighUnit, setWeighUnit] = useState<HisnikUnit>('kg')
+  const [weighQty, setWeighQty] = useState('')
   const [err, setErr] = useState<string | null>(null)
   const [working, setWorking] = useState(false)
 
-  async function issue(cans: 1 | 2) {
+  const need = cans * ODYSSEY_II_CAN_L
+  const skipperOk = Boolean(skipperId || skipperName.trim())
+  const canConfirm =
+    skipperOk && weighQty.trim() !== '' && stock + 1e-6 >= need && !busy && !working
+
+  async function confirm() {
     setErr(null)
     setWorking(true)
     try {
-      const s = await hisnikIssueOdysseyIi(cans)
+      const s = await hisnikIssueOdysseyIi({
+        cans,
+        skipperId: skipperId || null,
+        skipperName: skipperId ? null : skipperName,
+        weighUnit,
+        weighQty: Number(weighQty.replace(',', '.')),
+      })
       onDone(s)
     } catch (e) {
       setErr(terr(t, e))
@@ -629,32 +714,61 @@ function IssueIi({
         {t('The boat has room for 1 or 2 cans of 25 L. Stock:')}{' '}
         <span className="font-semibold text-foreground">{fmtL(stock, lang)}</span>
       </p>
-      <div className="grid gap-3">
-        <button
-          type="button"
-          disabled={busy || working || stock < ODYSSEY_II_CAN_L}
-          onClick={() => void issue(1)}
-          className="flex min-h-20 items-center justify-center rounded-2xl bg-accent text-xl font-semibold text-accent-foreground disabled:opacity-40"
-        >
-          {working ? (
-            <Loader2 className="h-6 w-6 animate-spin" />
-          ) : (
-            t('Issue 25 L (1 can)')
-          )}
-        </button>
-        <button
-          type="button"
-          disabled={busy || working || stock < ODYSSEY_II_CAN_L * 2}
-          onClick={() => void issue(2)}
-          className="flex min-h-20 items-center justify-center rounded-2xl bg-primary text-xl font-semibold text-primary-foreground disabled:opacity-40"
-        >
-          {working ? (
-            <Loader2 className="h-6 w-6 animate-spin" />
-          ) : (
-            t('Issue 50 L (2 cans)')
-          )}
-        </button>
+
+      <div className="grid grid-cols-2 gap-2">
+        {([1, 2] as const).map((n) => (
+          <button
+            key={n}
+            type="button"
+            disabled={stock < n * ODYSSEY_II_CAN_L}
+            onClick={() => setCans(n)}
+            className={`min-h-16 rounded-2xl border text-base font-semibold disabled:opacity-40 ${
+              cans === n
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border bg-card text-foreground'
+            }`}
+          >
+            {n === 1 ? t('1 can (25 L)') : t('2 cans (50 L)')}
+          </button>
+        ))}
       </div>
+
+      <SkipperPicker
+        skippers={skippers}
+        skipperId={skipperId}
+        skipperName={skipperName}
+        onSelectId={(id) => {
+          setSkipperId(id)
+          setSkipperName('')
+        }}
+        onName={(name) => {
+          setSkipperName(name)
+          setSkipperId('')
+        }}
+      />
+
+      <div className="space-y-2">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          {t('Weighed amount')}
+        </p>
+        <UnitToggle unit={weighUnit} onChange={setWeighUnit} />
+        <QtyField
+          value={weighQty}
+          onChange={setWeighQty}
+          unit={weighUnit}
+          density={density}
+          label={t('Weighed amount')}
+        />
+      </div>
+
+      <button
+        type="button"
+        disabled={!canConfirm}
+        onClick={() => void confirm()}
+        className="flex min-h-16 w-full items-center justify-center rounded-2xl bg-primary text-lg font-semibold text-primary-foreground disabled:opacity-40"
+      >
+        {working ? <Loader2 className="h-6 w-6 animate-spin" /> : t('Confirm issue')}
+      </button>
       {err && (
         <p className="text-sm" style={{ color: DUE_TONE.overdue.fg }}>
           {err}
@@ -667,12 +781,14 @@ function IssueIi({
 function WeighReturn({
   density,
   can,
+  skippers,
   busy,
   onBack,
   onDone,
 }: {
   density: number
   can: HisnikState['can']
+  skippers: HisnikSkipper[]
   busy: boolean
   onBack: () => void
   onDone: (s: HisnikState) => void
@@ -680,8 +796,12 @@ function WeighReturn({
   const { t, lang } = useLang()
   const [unit, setUnit] = useState<HisnikUnit>('kg')
   const [qty, setQty] = useState('')
+  const [skipperId, setSkipperId] = useState('')
+  const [skipperName, setSkipperName] = useState('')
   const [err, setErr] = useState<string | null>(null)
   const [working, setWorking] = useState(false)
+
+  const skipperOk = Boolean(skipperId || skipperName.trim())
 
   async function submit() {
     setErr(null)
@@ -690,6 +810,8 @@ function WeighReturn({
       const s = await hisnikWeighReturn({
         unit,
         qty: Number(qty.replace(',', '.')),
+        skipperId: skipperId || null,
+        skipperName: skipperId ? null : skipperName,
       })
       onDone(s)
     } catch (e) {
@@ -717,11 +839,30 @@ function WeighReturn({
           {issuedHint}
         </p>
       )}
+      <SkipperPicker
+        skippers={skippers}
+        skipperId={skipperId}
+        skipperName={skipperName}
+        onSelectId={(id) => {
+          setSkipperId(id)
+          setSkipperName('')
+        }}
+        onName={(name) => {
+          setSkipperName(name)
+          setSkipperId('')
+        }}
+      />
       <UnitToggle unit={unit} onChange={setUnit} />
-      <QtyField value={qty} onChange={setQty} unit={unit} density={density} />
+      <QtyField
+        value={qty}
+        onChange={setQty}
+        unit={unit}
+        density={density}
+        label={t('Weighed amount')}
+      />
       <button
         type="button"
-        disabled={busy || working || !qty}
+        disabled={busy || working || !qty || !skipperOk}
         onClick={() => void submit()}
         className="flex min-h-16 w-full items-center justify-center rounded-2xl text-lg font-semibold disabled:opacity-40"
         style={{ background: DUE_TONE.due.fg, color: '#132a42' }}
@@ -741,6 +882,7 @@ function WeighFill({
   density,
   stock,
   can,
+  skippers,
   busy,
   onBack,
   onDone,
@@ -748,6 +890,7 @@ function WeighFill({
   density: number
   stock: number
   can: HisnikState['can']
+  skippers: HisnikSkipper[]
   busy: boolean
   onBack: () => void
   onDone: (s: HisnikState) => void
@@ -761,6 +904,8 @@ function WeighFill({
       : '',
   )
   const [fillQty, setFillQty] = useState('')
+  const [skipperId, setSkipperId] = useState('')
+  const [skipperName, setSkipperName] = useState('')
   const [err, setErr] = useState<string | null>(null)
   const [working, setWorking] = useState(false)
 
@@ -774,6 +919,8 @@ function WeighFill({
     }
   }, [can])
 
+  const skipperOk = Boolean(skipperId || skipperName.trim())
+
   async function submit() {
     setErr(null)
     setWorking(true)
@@ -783,6 +930,8 @@ function WeighFill({
         weighQty: Number(weighQty.replace(',', '.')),
         fillUnit,
         fillQty: Number(fillQty.replace(',', '.')),
+        skipperId: skipperId || null,
+        skipperName: skipperId ? null : skipperName,
       })
       onDone(s)
     } catch (e) {
@@ -812,6 +961,7 @@ function WeighFill({
           onChange={setWeighQty}
           unit={weighUnit}
           density={density}
+          label={t('Weighed amount')}
         />
       </div>
 
@@ -825,12 +975,27 @@ function WeighFill({
           onChange={setFillQty}
           unit={fillUnit}
           density={density}
+          label={t('Weighed amount')}
         />
       </div>
 
+      <SkipperPicker
+        skippers={skippers}
+        skipperId={skipperId}
+        skipperName={skipperName}
+        onSelectId={(id) => {
+          setSkipperId(id)
+          setSkipperName('')
+        }}
+        onName={(name) => {
+          setSkipperName(name)
+          setSkipperId('')
+        }}
+      />
+
       <button
         type="button"
-        disabled={busy || working || !weighQty || !fillQty}
+        disabled={busy || working || !weighQty || !fillQty || !skipperOk}
         onClick={() => void submit()}
         className="flex min-h-16 w-full items-center justify-center rounded-2xl bg-primary text-lg font-semibold text-primary-foreground disabled:opacity-40"
       >

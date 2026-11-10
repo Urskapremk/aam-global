@@ -10,7 +10,7 @@ cp .env.example .env.local   # if present; otherwise set DATABASE_URL and other 
 pnpm exec next dev --port 43127
 ```
 
-Open [http://127.0.0.1:43127](http://127.0.0.1:43127). Admin: `/admin` (password from `ADMIN_PASSWORD` / auth setup). Caretaker fuel PWA: `/hisnik` (PIN from `CARETAKER_PIN`, local fallback `4242`).
+Open [http://127.0.0.1:43127](http://127.0.0.1:43127). Admin: `/admin` (password from `ADMIN_PASSWORD` / auth setup). Storekeeper fuel PWA: `/hisnik` (alias `/skladiscnik`; PIN from `CARETAKER_PIN`, local fallback `4242`).
 
 ## Public blog
 
@@ -34,7 +34,7 @@ Local/dev traffic usually has empty country. Geo fills in after deploy to Vercel
 | `BETTER_AUTH_SECRET` | Yes for better-auth | Auth secret |
 | `BETTER_AUTH_URL` | Recommended locally | e.g. `http://127.0.0.1:43127` |
 | `ADMIN_PASSWORD` | Optional | Simple admin gate (defaults to `9999` in code) |
-| `CARETAKER_PIN` | Optional | PIN for `/hisnik` caretaker fuel PWA (defaults to `4242` in code) |
+| `CARETAKER_PIN` | Optional | PIN for `/hisnik` storekeeper (skladiščnik) fuel PWA (defaults to `4242` in code) |
 | `RESEND_API_KEY` | Optional | Outbound email; skipped if unset |
 | `RESEND_WEBHOOK_SECRET` | Optional | Inbound email webhook |
 | `NOTIFY_EMAIL` / `EMAIL_FROM` | Optional | Email defaults exist in code |

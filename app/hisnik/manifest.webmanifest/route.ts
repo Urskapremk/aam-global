@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 
 export function GET() {
   const manifest = {
-    name: 'AAM Hišnik — Gorivo',
-    short_name: 'Hišnik',
+    name: 'AAM Skladiščnik — Gorivo',
+    short_name: 'Skladiščnik',
     description: 'Vnos izdaje in tehtanja goriva za Odyssey II / III.',
     start_url: '/hisnik',
     scope: '/hisnik',
