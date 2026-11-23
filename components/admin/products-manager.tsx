@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, Loader2, EyeOff, Star } from 'lucide-react'
 import { ImageUpload } from '@/components/admin/image-upload'
@@ -74,6 +74,11 @@ const EMPTY: Draft = {
   sortOrder: 0,
 }
 
+function nextSortOrder(products: AdminProduct[], from?: number) {
+  const high = products.reduce((m, p) => Math.max(m, p.sortOrder), -1)
+  return Math.max(high, from ?? -1, products.length - 1) + 1
+}
+
 export function ProductsManager({
   initial,
   emptyAction,
@@ -85,6 +90,9 @@ export function ProductsManager({
   const fx = useShopFx()
   const t = useT()
   const [draft, setDraft] = useState<Draft | null>(null)
+  const nameInputRef = useRef<HTMLInputElement>(null)
+  const formPanelRef = useRef<HTMLDivElement>(null)
+  const focusNameAfterOpen = useRef(false)
 
   const arOf = (p: { price: number; priceAr: number }) =>
     p.priceAr > 0 ? p.priceAr : fx?.arPerEur ? Math.round(p.price * fx.arPerEur) : 0
@@ -94,6 +102,24 @@ export function ProductsManager({
   const fmt = (n: number) => n.toLocaleString('en-GB')
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!draft || draft.id || !focusNameAfterOpen.current) return
+    focusNameAfterOpen.current = false
+    formPanelRef.current?.scrollTo({ top: 0 })
+    // Wait a frame so the cleared inputs are mounted before focusing.
+    requestAnimationFrame(() => nameInputRef.current?.focus())
+  }, [draft])
+
+  function startNew(preserve?: Pick<Draft, 'category' | 'priceUnit' | 'sortOrder'>) {
+    focusNameAfterOpen.current = true
+    setDraft({
+      ...EMPTY,
+      category: preserve?.category ?? EMPTY.category,
+      priceUnit: preserve?.priceUnit ?? EMPTY.priceUnit,
+      sortOrder: preserve?.sortOrder ?? nextSortOrder(initial),
+    })
+  }
 
   async function save() {
     if (!draft || !draft.name.trim()) return
@@ -117,9 +143,19 @@ export function ProductsManager({
         published: draft.published,
         sortOrder: Number(draft.sortOrder) || 0,
       }
+      const editing = Boolean(draft.id)
       if (draft.id) await updateProduct(draft.id, payload)
       else await createProduct(payload)
-      setDraft(null)
+      if (editing) {
+        setDraft(null)
+      } else {
+        // Bulk entry: clear the form, keep it open, focus Name for the next item.
+        startNew({
+          category: draft.category,
+          priceUnit: draft.priceUnit,
+          sortOrder: nextSortOrder(initial, draft.sortOrder),
+        })
+      }
       router.refresh()
     } finally {
       setSaving(false)
@@ -148,7 +184,7 @@ export function ProductsManager({
         </div>
         <button
           type="button"
-          onClick={() => setDraft({ ...EMPTY, sortOrder: initial.length })}
+          onClick={() => startNew()}
           className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" /> {t('Add product')}
@@ -301,16 +337,40 @@ export function ProductsManager({
         })}
       </div>
 
+      {/* Floating Add — always reachable while scrolling a long catalogue.
+          Sits above the shell’s mute / push chrome. Hidden while the form is open. */}
+      {!draft && (
+        <button
+          type="button"
+          onClick={() => startNew()}
+          aria-label={t('Add product')}
+          className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] left-1/2 z-[70] inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-xl ring-2 ring-primary/25 hover:bg-primary/90 sm:left-auto sm:right-[calc(1rem+env(safe-area-inset-right))] sm:translate-x-0"
+        >
+          <Plus className="h-4 w-4" /> {t('Add product')}
+        </button>
+      )}
+
       {draft && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
-          <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-background p-6 sm:rounded-2xl">
-            <h2 className="mb-4 font-serif text-xl text-foreground">
+          <div
+            ref={formPanelRef}
+            className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-background p-6 sm:rounded-2xl"
+          >
+            <h2 className="font-serif text-xl text-foreground">
               {draft.id ? t('Edit product') : t('New product')}
             </h2>
+            {!draft.id ? (
+              <p className="mb-4 mt-1 text-sm text-muted-foreground">
+                {t('After save, the form clears for the next product.')}
+              </p>
+            ) : (
+              <div className="mb-4" />
+            )}
 
             <div className="flex flex-col gap-4">
               <Field label={t('Name')}>
                 <input
+                  ref={nameInputRef}
                   value={draft.name}
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                   className="input"
@@ -453,7 +513,7 @@ export function ProductsManager({
                 onClick={() => setDraft(null)}
                 className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-secondary"
               >
-                {t('Cancel')}
+                {draft.id ? t('Cancel') : t('Done')}
               </button>
               <button
                 type="button"
@@ -462,7 +522,7 @@ export function ProductsManager({
                 className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
               >
                 {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                {t('Save')}
+                {draft.id ? t('Save') : t('Save & next')}
               </button>
             </div>
           </div>

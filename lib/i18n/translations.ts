@@ -206,6 +206,10 @@ export const SL: Record<string, string> = {
   // --- Shop product cards, costing and stock ---
   'Shown in the AAM Shop.': 'Prikazano v trgovini AAM.',
   'Add product': 'Dodaj artikel',
+  'Save & next': 'Shrani in naslednji',
+  Done: 'Končano',
+  'After save, the form clears for the next product.':
+    'Po shranjevanju se obrazec počisti za naslednji artikel.',
   'No products yet. Add one, or import the current catalogue.':
     'Ni še artiklov. Dodaj enega ali uvozi trenutni katalog.',
   'Delete this product?': 'Izbrišem ta artikel?',
@@ -1086,5 +1090,10 @@ export const FR: Record<string, string> = {
   Error: 'Erreur',
   'Could not read stock': 'Impossible de lire le stock',
   Save: 'Enregistrer',
+  'Save & next': 'Enregistrer et suivant',
+  Done: 'Terminé',
+  'After save, the form clears for the next product.':
+    'Après enregistrement, le formulaire se vide pour le produit suivant.',
+  'Add product': 'Ajouter un produit',
   Close: 'Fermer',
 }
