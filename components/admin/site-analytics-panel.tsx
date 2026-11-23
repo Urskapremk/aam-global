@@ -32,11 +32,16 @@ function rangeLabel(r: AnalyticsRange): string {
   }
 }
 
-function countryName(code: string, lang: 'en' | 'sl'): string {
-  if (!code) return lang === 'sl' ? 'Neznano / lokalno' : 'Unknown / local'
+function countryName(code: string, lang: 'en' | 'sl' | 'fr'): string {
+  if (!code) {
+    if (lang === 'sl') return 'Neznano / lokalno'
+    if (lang === 'fr') return 'Inconnu / local'
+    return 'Unknown / local'
+  }
   try {
+    const locale = lang === 'sl' ? 'sl' : lang === 'fr' ? 'fr' : 'en'
     return (
-      new Intl.DisplayNames([lang === 'sl' ? 'sl' : 'en'], {
+      new Intl.DisplayNames([locale], {
         type: 'region',
       }).of(code.toUpperCase()) ?? code.toUpperCase()
     )
@@ -45,9 +50,10 @@ function countryName(code: string, lang: 'en' | 'sl'): string {
   }
 }
 
-function formatWhen(iso: string, lang: 'en' | 'sl'): string {
+function formatWhen(iso: string, lang: 'en' | 'sl' | 'fr'): string {
   try {
-    return new Date(iso).toLocaleString(lang === 'sl' ? 'sl-SI' : 'en-GB', {
+    const locale = lang === 'sl' ? 'sl-SI' : lang === 'fr' ? 'fr-FR' : 'en-GB'
+    return new Date(iso).toLocaleString(locale, {
       dateStyle: 'medium',
       timeStyle: 'short',
     })

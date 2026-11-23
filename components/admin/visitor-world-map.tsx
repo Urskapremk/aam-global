@@ -12,7 +12,7 @@ export type MapCountry = { country: string; views: number }
 
 type Props = {
   countries: MapCountry[]
-  lang: 'en' | 'sl'
+  lang: 'en' | 'sl' | 'fr'
   labelViews: string
 }
 

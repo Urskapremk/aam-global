@@ -34,9 +34,10 @@ import { useLang } from '@/lib/i18n/context'
 
 import { Panel, headerButtonClass, inputClass, labelClass, primaryButtonClass, todayIso, useHrStaff } from './hr-shared'
 
-const DAY_NAMES: Record<'en' | 'sl', string[]> = {
+const DAY_NAMES: Record<'en' | 'sl' | 'fr', string[]> = {
   en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
   sl: ['Ned', 'Pon', 'Tor', 'Sre', 'Čet', 'Pet', 'Sob'],
+  fr: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
 }
 
 const OFF_CLASS = 'border-border bg-transparent text-muted-foreground/60'
