@@ -42,7 +42,7 @@ export function Contact() {
     const data = new FormData(form)
     const name = String(data.get('name') || '')
     const email = String(data.get('email') || '')
-    const service = String(data.get('service') || 'General enquiry')
+    const service = String(data.get('service') || 'AAM Fishing')
     const date = String(data.get('date') || '')
     const message = String(data.get('message') || '')
 
@@ -161,9 +161,6 @@ export function Contact() {
                     <select id="service" name="service" className="input-base">
                       <option>AAM Fishing</option>
                       <option>AAM Charters</option>
-                      <option>AAM Marine</option>
-                      <option>AAM Shop</option>
-                      <option>General enquiry</option>
                     </select>
                   </Field>
                   <Field label="Preferred date" htmlFor="date">
