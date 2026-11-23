@@ -1,6 +1,7 @@
 import { getProducts } from '@/app/actions/shop-products'
 import { ProductsManager } from '@/components/admin/products-manager'
 import { ImportProductsButton } from '@/components/admin/seed-buttons'
+import { normalizeShopPriceUnit } from '@/lib/products'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +13,7 @@ export default async function AdminProductsPage() {
     category: r.category,
     price: r.price,
     priceAr: r.priceAr ?? 0,
+    priceUnit: normalizeShopPriceUnit(r.priceUnit),
     costAr: r.costAr ?? 0,
     transportAr: r.transportAr ?? 0,
     customsAr: r.customsAr ?? 0,

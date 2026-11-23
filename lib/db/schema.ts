@@ -90,6 +90,8 @@ export const shopProducts = pgTable('shop_products', {
   category: text('category').notNull().default('Accessories'),
   price: integer('price').notNull().default(0), // EUR, derived from priceAr when set
   priceAr: integer('priceAr').notNull().default(0), // base price in Ariary
+  // How the selling price is quoted on the public shop: 'piece' | 'set'.
+  priceUnit: text('priceUnit').notNull().default('piece'),
   // Admin-only costing (Ariary); never exposed on the public shop.
   costAr: integer('costAr').notNull().default(0),
   transportAr: integer('transportAr').notNull().default(0),

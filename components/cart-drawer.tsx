@@ -3,9 +3,10 @@
 import { useEffect } from 'react'
 import { X, Minus, Plus, Trash2, ShoppingBag, MessageCircle } from 'lucide-react'
 import { useCart } from '@/components/cart-context'
-import { formatEur } from '@/lib/products'
+import { formatEur, normalizeShopPriceUnit } from '@/lib/products'
 import { saveInboundMessage } from '@/app/actions/messages'
 import { ShopPriceAlt, shopFxText, useShopFx } from '@/components/shop-price'
+import { useT } from '@/lib/i18n/context'
 
 // AAM WhatsApp order line (digits only, international format)
 const WHATSAPP_NUMBER = '261386129869'
@@ -14,6 +15,7 @@ export function CartDrawer() {
   const { items, subtotal, count, isOpen, closeCart, setQuantity, removeItem } =
     useCart()
   const fx = useShopFx()
+  const t = useT()
 
   // Lock body scroll while the drawer is open
   useEffect(() => {
@@ -193,7 +195,8 @@ export function CartDrawer() {
                   />
                         {quantity > 1 && (
                           <span className="block text-[11px] tabular-nums text-muted-foreground">
-                            {quantity} × {formatEur(product.price)} / piece
+                            {quantity} × {formatEur(product.price)} /{' '}
+                            {t(normalizeShopPriceUnit(product.priceUnit))}
                           </span>
                         )}
                       </div>

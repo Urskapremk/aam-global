@@ -3,8 +3,13 @@
 import { useEffect, useId, useRef, useState, type TouchEvent } from 'react'
 import { ChevronLeft, ChevronRight, Plus, X, ZoomIn } from 'lucide-react'
 import { useCart } from '@/components/cart-context'
-import { formatEur, type Product } from '@/lib/products'
+import {
+  formatEur,
+  normalizeShopPriceUnit,
+  type Product,
+} from '@/lib/products'
 import { ShopPriceAlt } from '@/components/shop-price'
+import { useT } from '@/lib/i18n/context'
 
 function galleryFor(product: Product): string[] {
   const urls = [product.image, product.image2, product.image3].filter(
@@ -15,11 +20,13 @@ function galleryFor(product: Product): string[] {
 
 export function ProductCard({ product }: { product: Product }) {
   const { addItem } = useCart()
+  const t = useT()
   const [photoIndex, setPhotoIndex] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const titleId = useId()
   const touchStartX = useRef<number | null>(null)
   const didSwipe = useRef(false)
+  const priceUnit = normalizeShopPriceUnit(product.priceUnit)
 
   const gallery = galleryFor(product)
   const imageSrc = gallery[Math.min(photoIndex, gallery.length - 1)] ?? gallery[0]
@@ -151,7 +158,7 @@ export function ProductCard({ product }: { product: Product }) {
             <span className="font-serif text-xl font-medium tabular-nums text-foreground">
               {formatEur(product.price)}{' '}
               <span className="font-sans text-xs font-normal text-muted-foreground">
-                / piece
+                / {t(priceUnit)}
               </span>
             </span>
             <ShopPriceAlt eur={product.price} ar={product.priceAr} />
