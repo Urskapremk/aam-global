@@ -143,6 +143,16 @@ export const SL: Record<string, string> = {
   'Employer contributions': 'Prispevki delodajalca',
   'Payroll (Madagascar)': 'Obračun plač (Madagaskar)',
   'No active staff.': 'Ni aktivnega osebja.',
+  'Interns — salary receipts': 'Interni — potrdila o prejemu plače',
+  'Interns are not on the full Madagascar payroll. Print a salary receipt for the selected month only.':
+    'Interni niso na polnem obračunu MG. Natisni samo potrdilo o prejemu plače za izbrani mesec.',
+  'No active interns.': 'Ni aktivnih internih.',
+  'Salary receipt (intern)': 'Potrdilo o prejemu plače (intern)',
+  'Preview receipt': 'Predogled potrdila',
+  Amount: 'Znesek',
+  Total: 'Skupaj',
+  'Amount only — no CNAPS / OMINO / IRSA (not a full payslip).':
+    'Samo znesek — brez CNAPS / OMINO / IRSA (ni polni obračun).',
   'Open-ended': 'Nedoločen čas',
   Expired: 'Potekla',
   'Ends in': 'Poteče čez',
