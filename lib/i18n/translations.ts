@@ -169,6 +169,8 @@ export const SL: Record<string, string> = {
   'End of employment (empty = still employed)': 'Konec zaposlitve (prazno = še zaposlen)',
   Place: 'Kraj',
   'Choose a person to preview the certificate.': 'Izberi osebo za predogled certifikata.',
+  'Open the preview to review the certificate, then print from there.':
+    'Odpri predogled, preveri certifikat in šele nato natisni.',
   Sanction: 'Sankcija',
   Commendation: 'Pohvala',
   'Disciplinary & commendation records': 'Disciplinski zapisi in pohvale',
