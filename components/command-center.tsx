@@ -126,8 +126,9 @@ function Stat({
 export function CommandCenter() {
   const tr = useT()
   // The navy header toggles the whole body; the alert badge stays visible in
-  // the header so a problem is still flagged while collapsed.
-  const [collapsed, setCollapsed] = useState(false)
+  // the header so a problem is still flagged while collapsed. Starts closed so
+  // the dashboard opens compact; one click expands the stats and shortcuts.
+  const [collapsed, setCollapsed] = useState(true)
   const { data, error, isLoading, mutate } = useSWR(
     'fleet-overview',
     getFleetOverview,
