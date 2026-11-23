@@ -6,11 +6,16 @@
 import L from 'leaflet'
 import type { MapCountry } from './visitor-world-map'
 
-function countryName(code: string, lang: 'en' | 'sl'): string {
-  if (!code) return lang === 'sl' ? 'Neznano' : 'Unknown'
+function countryName(code: string, lang: 'en' | 'sl' | 'fr'): string {
+  if (!code) {
+    if (lang === 'sl') return 'Neznano'
+    if (lang === 'fr') return 'Inconnu'
+    return 'Unknown'
+  }
   try {
+    const locale = lang === 'sl' ? 'sl' : lang === 'fr' ? 'fr' : 'en'
     return (
-      new Intl.DisplayNames([lang === 'sl' ? 'sl' : 'en'], {
+      new Intl.DisplayNames([locale], {
         type: 'region',
       }).of(code.toUpperCase()) ?? code.toUpperCase()
     )
@@ -30,7 +35,7 @@ function colorFor(views: number, max: number): string {
 
 export type MountVisitorMapOpts = {
   countries: MapCountry[]
-  lang: 'en' | 'sl'
+  lang: 'en' | 'sl' | 'fr'
   labelViews: string
 }
 
@@ -89,7 +94,7 @@ export async function mountVisitorMap(
       const name = countryName(iso, lang)
       lyr.bindTooltip(
         `<strong>${name}</strong><br/>${labelViews}: ${views.toLocaleString(
-          lang === 'sl' ? 'sl-SI' : 'en-GB',
+          lang === 'sl' ? 'sl-SI' : lang === 'fr' ? 'fr-FR' : 'en-GB',
         )}`,
         { sticky: true, className: 'aam-analytics-tip' },
       )
