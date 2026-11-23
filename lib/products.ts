@@ -7,6 +7,15 @@ export type ProductCategory =
   | 'Apparel'
   | 'Accessories'
 
+/** Selling-price unit shown next to the amount on shop cards. */
+export type ShopPriceUnit = 'piece' | 'set'
+
+export const SHOP_PRICE_UNITS: ShopPriceUnit[] = ['piece', 'set']
+
+export function normalizeShopPriceUnit(value: unknown): ShopPriceUnit {
+  return value === 'set' ? 'set' : 'piece'
+}
+
 export type Product = {
   id: string
   name: string
@@ -15,6 +24,8 @@ export type Product = {
   price: number
   /** Base price in Ariary */
   priceAr?: number
+  /** Quoted as per piece or per set on the public shop (defaults to piece) */
+  priceUnit?: ShopPriceUnit
   image: string
   /** Optional extra photos (up to two beyond the main image) */
   image2?: string
@@ -44,6 +55,7 @@ type DbProductRow = {
   category: string
   price: number
   priceAr?: number | null
+  priceUnit?: string | null
   image: string | null
   image2?: string | null
   image3?: string | null
@@ -75,6 +87,7 @@ export function toProduct(row: DbProductRow, arPerEur?: number): Product {
       : 'Accessories') as ProductCategory,
     price,
     priceAr,
+    priceUnit: normalizeShopPriceUnit(row.priceUnit),
     image: row.image || '/placeholder.svg?height=800&width=800',
     image2: row.image2 || undefined,
     image3: row.image3 || undefined,

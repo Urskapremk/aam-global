@@ -4,7 +4,12 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, Loader2, EyeOff, Star } from 'lucide-react'
 import { ImageUpload } from '@/components/admin/image-upload'
-import { PRODUCT_CATEGORIES } from '@/lib/products'
+import {
+  PRODUCT_CATEGORIES,
+  SHOP_PRICE_UNITS,
+  normalizeShopPriceUnit,
+  type ShopPriceUnit,
+} from '@/lib/products'
 import { useShopFx } from '@/components/shop-price'
 import { ProductStock } from '@/components/admin/product-stock'
 import { useT } from '@/lib/i18n/context'
@@ -20,6 +25,7 @@ export type AdminProduct = {
   category: string
   price: number
   priceAr: number
+  priceUnit: ShopPriceUnit
   costAr: number
   transportAr: number
   customsAr: number
@@ -35,6 +41,10 @@ export type AdminProduct = {
   sortOrder: number
 }
 
+function unitPhrase(unit: ShopPriceUnit, t: (s: string) => string) {
+  return unit === 'set' ? t('per set') : t('per piece')
+}
+
 const landedOf = (p: { costAr: number; transportAr: number; customsAr: number }) =>
   (Number(p.costAr) || 0) + (Number(p.transportAr) || 0) + (Number(p.customsAr) || 0)
 
@@ -48,6 +58,7 @@ const EMPTY: Draft = {
   category: 'Lures & Baits',
   price: 0,
   priceAr: 0,
+  priceUnit: 'piece',
   costAr: 0,
   transportAr: 0,
   customsAr: 0,
@@ -92,6 +103,7 @@ export function ProductsManager({
         name: draft.name.trim(),
         category: draft.category,
         priceAr: Math.round(Number(draft.priceAr) || 0),
+        priceUnit: normalizeShopPriceUnit(draft.priceUnit),
         costAr: Math.round(Number(draft.costAr) || 0),
         transportAr: Math.round(Number(draft.transportAr) || 0),
         customsAr: Math.round(Number(draft.customsAr) || 0),
@@ -213,7 +225,9 @@ export function ProductsManager({
 
                 <dl className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg bg-secondary/60 p-3 text-sm tabular-nums">
                   <dt className="col-span-2 mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-                    {t('All prices per piece')}
+                    {p.priceUnit === 'set'
+                      ? t('All prices per set')
+                      : t('All prices per piece')}
                   </dt>
                   <dt className="text-muted-foreground">{t('Purchase price')}</dt>
                   <dd className="text-right">Ar {fmt(Number(p.costAr) || 0)}</dd>
@@ -250,7 +264,7 @@ export function ProductsManager({
                     <p className="text-lg font-semibold tabular-nums text-foreground">
                       Ar {fmt(sellAr)}{' '}
                       <span className="text-xs font-normal text-muted-foreground">
-                        / {t('per piece')}
+                        / {unitPhrase(p.priceUnit, t)}
                       </span>
                     </p>
                     <p className="text-xs tabular-nums text-muted-foreground">
@@ -320,32 +334,57 @@ export function ProductsManager({
                     ))}
                   </select>
                 </Field>
-                <Field label={t('Selling price (Ar, per piece)')}>
-                  <input
-                    type="number"
-                    min={0}
-                    step={1000}
-                    value={draft.priceAr || ''}
-                    onChange={(e) => {
-                      const priceAr = Number(e.target.value)
-                      const landed = landedOf(draft)
-                      // Editing the selling price back-calculates the margin.
-                      const marginPct =
-                        landed > 0
-                          ? Math.round(((priceAr - landed) / landed) * 1000) / 10
-                          : draft.marginPct
-                      setDraft({ ...draft, priceAr, marginPct })
-                    }}
+                <Field label={t('Price unit')}>
+                  <select
+                    value={draft.priceUnit}
+                    onChange={(e) =>
+                      setDraft({
+                        ...draft,
+                        priceUnit: normalizeShopPriceUnit(e.target.value),
+                      })
+                    }
                     className="input"
-                    placeholder={t('e.g. 150000')}
-                  />
-                  <p className="mt-1.5 text-xs tabular-nums text-muted-foreground">
-                    {fx
-                      ? `≈ € ${fmt(eurOf(draft.priceAr))} · R ${fmt(zarOf(draft.priceAr))}`
-                      : t('Loading rate…')}
-                  </p>
+                  >
+                    {SHOP_PRICE_UNITS.map((u) => (
+                      <option key={u} value={u}>
+                        {u === 'set' ? t('Set') : t('Piece (kos)')}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
               </div>
+
+              <Field
+                label={
+                  draft.priceUnit === 'set'
+                    ? t('Selling price (Ar, per set)')
+                    : t('Selling price (Ar, per piece)')
+                }
+              >
+                <input
+                  type="number"
+                  min={0}
+                  step={1000}
+                  value={draft.priceAr || ''}
+                  onChange={(e) => {
+                    const priceAr = Number(e.target.value)
+                    const landed = landedOf(draft)
+                    // Editing the selling price back-calculates the margin.
+                    const marginPct =
+                      landed > 0
+                        ? Math.round(((priceAr - landed) / landed) * 1000) / 10
+                        : draft.marginPct
+                    setDraft({ ...draft, priceAr, marginPct })
+                  }}
+                  className="input"
+                  placeholder={t('e.g. 150000')}
+                />
+                <p className="mt-1.5 text-xs tabular-nums text-muted-foreground">
+                  {fx
+                    ? `≈ € ${fmt(eurOf(draft.priceAr))} · R ${fmt(zarOf(draft.priceAr))}`
+                    : t('Loading rate…')}
+                </p>
+              </Field>
 
               <CostingBlock draft={draft} setDraft={setDraft} fmt={fmt} t={t} />
 
@@ -478,7 +517,11 @@ function CostingBlock({
     <div className="rounded-xl border border-border bg-secondary/40 p-4">
       <div className="mb-3 flex items-baseline justify-between gap-2">
         <p className="text-sm font-medium text-foreground">{t('Cost calculation')}</p>
-        <p className="text-xs text-muted-foreground">{t('Admin only · in Ar · per piece')}</p>
+        <p className="text-xs text-muted-foreground">
+          {draft.priceUnit === 'set'
+            ? t('Admin only · in Ar · per set')
+            : t('Admin only · in Ar · per piece')}
+        </p>
       </div>
       <div className="grid grid-cols-3 gap-3">
         {costField('costAr', t('Purchase price'))}

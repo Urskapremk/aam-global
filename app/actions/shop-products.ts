@@ -3,6 +3,7 @@
 import { db, pool } from '@/lib/db'
 import { shopProducts } from '@/lib/db/schema'
 import { isAdmin } from '@/lib/admin-auth'
+import { normalizeShopPriceUnit, type ShopPriceUnit } from '@/lib/products'
 import { getFxRates } from './fuel'
 import { asc, eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
@@ -23,7 +24,8 @@ function ensurePriceArColumn() {
          ADD COLUMN IF NOT EXISTS "marginPct" double precision NOT NULL DEFAULT 0,
          ADD COLUMN IF NOT EXISTS "stock" integer,
          ADD COLUMN IF NOT EXISTS "image2" text,
-         ADD COLUMN IF NOT EXISTS "image3" text`,
+         ADD COLUMN IF NOT EXISTS "image3" text,
+         ADD COLUMN IF NOT EXISTS "priceUnit" text NOT NULL DEFAULT 'piece'`,
     )
     await pool.query(
       `CREATE TABLE IF NOT EXISTS shop_stock_moves (
@@ -64,6 +66,7 @@ export async function getPublishedProducts() {
       category: shopProducts.category,
       price: shopProducts.price,
       priceAr: shopProducts.priceAr,
+      priceUnit: shopProducts.priceUnit,
       image: shopProducts.image,
       image2: shopProducts.image2,
       image3: shopProducts.image3,
@@ -76,13 +79,18 @@ export async function getPublishedProducts() {
     .from(shopProducts)
     .where(eq(shopProducts.published, true))
     .orderBy(asc(shopProducts.sortOrder), asc(shopProducts.id))
-  return rows.map(({ stock, ...r }) => ({ ...r, soldOut: stock !== null && stock <= 0 }))
+  return rows.map(({ stock, priceUnit, ...r }) => ({
+    ...r,
+    priceUnit: normalizeShopPriceUnit(priceUnit),
+    soldOut: stock !== null && stock <= 0,
+  }))
 }
 
 type ProductInput = {
   name: string
   category: string
   priceAr: number
+  priceUnit: ShopPriceUnit
   costAr: number
   transportAr: number
   customsAr: number
@@ -111,7 +119,17 @@ async function withEurPrice(data: ProductInput) {
     landedAr > 0 ? Math.round(landedAr * (1 + marginPct / 100)) : nonNegInt(data.priceAr)
   const { arPerEur } = await getFxRates()
   const price = arPerEur > 0 ? Math.round(priceAr / arPerEur) : 0
-  return { ...data, costAr, transportAr, customsAr, marginPct, priceAr, price }
+  const priceUnit = normalizeShopPriceUnit(data.priceUnit)
+  return {
+    ...data,
+    costAr,
+    transportAr,
+    customsAr,
+    marginPct,
+    priceAr,
+    price,
+    priceUnit,
+  }
 }
 
 /** Shop catalogue is loaded in the root layout (CartProvider), so product
