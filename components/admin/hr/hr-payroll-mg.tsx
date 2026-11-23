@@ -1,7 +1,8 @@
 'use client'
 
-import { ChevronDown, ChevronLeft, ChevronRight, Loader2, Printer } from 'lucide-react'
+import { Anchor, ChevronDown, ChevronLeft, ChevronRight, Eye, Loader2, Printer, X } from 'lucide-react'
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import useSWR from 'swr'
 
 import {
@@ -10,10 +11,25 @@ import {
   type HrPayrollEntry,
   type HrStaff,
 } from '@/app/actions/hr'
-import { useLang } from '@/lib/i18n/context'
+import { useLang, useT } from '@/lib/i18n/context'
 import { ariary, calcPayslip, fullYearsBetween, type Payslip } from '@/lib/hr'
 
-import { Panel, PrintStyles, inputClass, labelClass, useHrStaff } from './hr-shared'
+import { Panel, PrintStyles, inputClass, labelClass, todayIso, useHrStaff } from './hr-shared'
+
+/** Official AAM letterhead — same tokens as Certificat de travail (hr-records). */
+const AAM_BRAND = 'AAM'
+const AAM_COMPANY = 'African Adventures Madagascar'
+const AAM_LOCATION = 'Nosy Komba, Madagascar'
+const AAM_SIGNATORY = 'Mike Schneider'
+const AAM_NAVY = '#1e3a5f'
+
+const frDate = (iso: string) =>
+  iso
+    ? new Date(`${iso}T00:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+    : '…'
+
+const frMonthLabel = (month: string) =>
+  new Date(`${month}-01T00:00:00`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
 
 function shiftMonth(month: string, delta: number): string {
   const [y, m] = month.split('-').map(Number)
@@ -220,13 +236,201 @@ function PayrollRow({
   )
 }
 
+function InternSalaryReceiptDocument({
+  person,
+  month,
+  amountAr,
+  place,
+}: {
+  person: Pick<HrStaff, 'name' | 'birthDate' | 'birthPlace' | 'cin' | 'position'>
+  month: string
+  amountAr: number
+  place: string
+}) {
+  const period = frMonthLabel(month)
+  return (
+    <article className="hr-print-root mx-auto max-w-2xl bg-white p-10 font-serif text-[15px] leading-relaxed text-neutral-900">
+      <header className="mb-10">
+        <div className="flex items-center gap-2.5" style={{ color: AAM_NAVY }}>
+          <Anchor className="h-5 w-5 shrink-0" strokeWidth={1.5} aria-hidden />
+          <span className="text-2xl font-semibold leading-none tracking-[0.2em]">{AAM_BRAND}</span>
+        </div>
+        <p className="mt-3 text-base font-medium" style={{ color: AAM_NAVY }}>
+          {AAM_COMPANY}
+        </p>
+        <p className="mt-0.5 text-sm text-neutral-600">{AAM_LOCATION}</p>
+      </header>
+      <h3 className="mb-8 text-center text-xl font-semibold uppercase tracking-[0.2em]">
+        Reçu de rémunération
+      </h3>
+      <p>
+        Je soussigné, représentant de la société <strong>{AAM_COMPANY}</strong>, certifie avoir versé à{' '}
+        <strong>{person.name}</strong>
+        {person.birthDate && <>, né(e) le {frDate(person.birthDate)}</>}
+        {person.birthPlace && <> à {person.birthPlace}</>}
+        {person.cin && <>, titulaire de la CIN n° {person.cin}</>}, stagiaire
+        {person.position ? (
+          <>
+            {' '}
+            en qualité de <strong>{person.position}</strong>
+          </>
+        ) : null}
+        , la somme de <strong>{ariary(amountAr)}</strong> au titre de la rémunération du mois de{' '}
+        <strong className="capitalize">{period}</strong>.
+      </p>
+      <p className="mt-4">
+        Ce document tient lieu de reçu de rémunération pour le mois concerné uniquement. Il ne constitue pas un
+        bulletin de paie.
+      </p>
+      <p className="mt-4">Ce reçu est délivré à l’intéressé(e) pour servir et valoir ce que de droit.</p>
+      <p className="mt-10 text-right">
+        Fait à {place}, le {frDate(todayIso())}
+      </p>
+      <div className="mt-16 text-right">
+        <p>La Direction</p>
+        <p className="mt-6 font-medium">{AAM_SIGNATORY}</p>
+      </div>
+    </article>
+  )
+}
+
+function InternReceiptPreviewModal({
+  person,
+  month,
+  place,
+  onClose,
+}: {
+  person: HrStaff
+  month: string
+  place: string
+  onClose: () => void
+}) {
+  const t = useT()
+
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 print:static print:bg-transparent print:p-0"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-card shadow-xl print:max-h-none print:w-full print:max-w-none print:rounded-none print:shadow-none"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('Salary receipt (intern)')}
+      >
+        <div className="flex items-center justify-between gap-2 border-b border-border px-5 py-3 print:hidden">
+          <h2 className="font-serif text-lg text-foreground">{t('Salary receipt (intern)')}</h2>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-medium uppercase tracking-[0.1em] text-primary-foreground transition hover:opacity-90"
+            >
+              <Printer className="h-3.5 w-3.5" aria-hidden />
+              {t('Print')}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t('Close')}
+              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-border text-muted-foreground transition hover:text-foreground"
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
+        </div>
+        <div className="overflow-y-auto bg-neutral-100 p-4 print:bg-white print:p-0">
+          <div className="rounded-xl shadow-sm print:rounded-none print:shadow-none">
+            <InternSalaryReceiptDocument
+              person={person}
+              month={month}
+              amountAr={person.baseSalaryAr}
+              place={place}
+            />
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
+function InternPayrollSection({
+  interns,
+  month,
+  receiptStaffId,
+  onPreview,
+}: {
+  interns: HrStaff[]
+  month: string
+  receiptStaffId: string | null
+  onPreview: (id: string) => void
+}) {
+  const { t } = useLang()
+  const receiptPerson = interns.find((s) => s.id === receiptStaffId) ?? null
+
+  return (
+    <>
+      <Panel title={t('Interns — salary receipts')}>
+        <p className="border-b border-border px-5 py-3 text-sm text-muted-foreground">
+          {t('Interns are not on the full Madagascar payroll. Print a salary receipt for the selected month only.')}
+        </p>
+        {interns.length === 0 ? (
+          <p className="p-5 text-sm text-muted-foreground">{t('No active interns.')}</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {interns.map((s) => (
+              <li key={s.id} className="flex flex-wrap items-center gap-x-6 gap-y-2 p-4">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">{s.name}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    {s.position || '—'}
+                    {s.baseSalaryAr <= 0 && ` · ${t('No base salary set in the staff list')}`}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{t('Amount')}</p>
+                  <p className="text-sm font-medium tabular-nums text-foreground">{ariary(s.baseSalaryAr)}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onPreview(s.id)}
+                  className="flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full border border-border px-4 text-xs font-medium uppercase tracking-[0.1em] text-foreground hover:bg-muted"
+                >
+                  <Eye className="h-3.5 w-3.5" aria-hidden />
+                  {t('Preview receipt')}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+      {receiptPerson && (
+        <InternReceiptPreviewModal
+          person={receiptPerson}
+          month={month}
+          place="Nosy Be"
+          onClose={() => onPreview('')}
+        />
+      )}
+    </>
+  )
+}
+
 export function HrPayrollMg() {
   const { t, lang } = useLang()
   const [month, setMonth] = useState(previousMonth)
+  const [receiptStaffId, setReceiptStaffId] = useState<string | null>(null)
   const staff = useHrStaff()
   const payroll = useSWR(['hr-payroll', month], () => getHrPayrollMonth(month))
 
-  const people = (staff.data ?? []).filter((s) => s.active && s.employmentType !== 'intern')
+  const active = staff.data ?? []
+  const people = active.filter((s) => s.active && s.employmentType !== 'intern')
+  const interns = active.filter((s) => s.active && s.employmentType === 'intern')
   const entryFor = (id: string) =>
     payroll.data?.entries.find((e) => e.staffId === id) ?? emptyEntry(id, month)
 
@@ -238,11 +442,21 @@ export function HrPayrollMg() {
     }),
   )
   const total = (k: keyof Payslip) => slips.reduce((sum, s) => sum + (s[k] as number), 0)
+  const internTotal = interns.reduce((sum, s) => sum + s.baseSalaryAr, 0)
 
-  const monthLabel = new Date(`${month}-01T00:00:00`).toLocaleDateString(lang === 'sl' ? 'sl-SI' : 'en-GB', {
-    month: 'long',
-    year: 'numeric',
-  })
+  const monthLabel = new Date(`${month}-01T00:00:00`).toLocaleDateString(
+    lang === 'sl' ? 'sl-SI' : lang === 'fr' ? 'fr-FR' : 'en-GB',
+    {
+      month: 'long',
+      year: 'numeric',
+    },
+  )
+
+  // When an intern receipt preview is open, it owns `.hr-print-root` — hide the
+  // month summary print root so both documents do not print together.
+  const summaryPrintClass = receiptStaffId
+    ? 'hidden'
+    : 'hr-print-root hidden print:block'
 
   return (
     <div className="space-y-4">
@@ -270,7 +484,8 @@ export function HrPayrollMg() {
         <button
           type="button"
           onClick={() => window.print()}
-          className="flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-border px-4 text-xs font-medium uppercase tracking-[0.1em] text-foreground hover:bg-muted"
+          disabled={!!receiptStaffId}
+          className="flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-border px-4 text-xs font-medium uppercase tracking-[0.1em] text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Printer className="h-4 w-4" aria-hidden />
           {t('Print payroll summary')}
@@ -315,8 +530,15 @@ export function HrPayrollMg() {
         )}
       </Panel>
 
+      <InternPayrollSection
+        interns={interns}
+        month={month}
+        receiptStaffId={receiptStaffId}
+        onPreview={(id) => setReceiptStaffId(id || null)}
+      />
+
       {/* Printable summary, hidden on screen. */}
-      <div className="hr-print-root hidden print:block">
+      <div className={summaryPrintClass}>
         <h1 style={{ fontSize: 18, fontWeight: 600 }}>
           {t('Payroll (Madagascar)')} — <span className="capitalize">{monthLabel}</span>
         </h1>
@@ -349,6 +571,43 @@ export function HrPayrollMg() {
             })}
           </tbody>
         </table>
+
+        {interns.length > 0 && (
+          <>
+            <h2 style={{ fontSize: 14, fontWeight: 600, marginTop: 28 }}>
+              {t('Interns — salary receipts')} — <span className="capitalize">{monthLabel}</span>
+            </h2>
+            <p style={{ fontSize: 11, color: '#555', marginTop: 4 }}>
+              {t('Amount only — no CNAPS / OMINO / IRSA (not a full payslip).')}
+            </p>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8, fontSize: 11 }}>
+              <thead>
+                <tr>
+                  {['Name', 'Position', 'Amount'].map((h) => (
+                    <th key={h} style={{ textAlign: 'left', borderBottom: '1px solid #999', padding: '4px 6px' }}>
+                      {t(h)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {interns.map((s) => (
+                  <tr key={s.id}>
+                    <td style={{ padding: '4px 6px', borderBottom: '1px solid #ddd' }}>{s.name}</td>
+                    <td style={{ padding: '4px 6px', borderBottom: '1px solid #ddd' }}>{s.position || '—'}</td>
+                    <td style={{ padding: '4px 6px', borderBottom: '1px solid #ddd' }}>{ariary(s.baseSalaryAr)}</td>
+                  </tr>
+                ))}
+                <tr>
+                  <td colSpan={2} style={{ padding: '6px 6px', fontWeight: 600 }}>
+                    {t('Total')}
+                  </td>
+                  <td style={{ padding: '6px 6px', fontWeight: 600 }}>{ariary(internTotal)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </>
+        )}
       </div>
     </div>
   )
