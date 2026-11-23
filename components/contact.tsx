@@ -191,7 +191,7 @@ export function Contact() {
                   disabled={sending}
                   className="mt-2 inline-flex items-center justify-center rounded-full bg-primary px-7 py-3.5 text-sm font-medium tracking-wide text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
                 >
-                  {sending ? 'Sending…' : 'Send inquiry'}
+                  {sending ? 'Sending…' : 'Send enquiry'}
                 </button>
                 {error && (
                   <p className="text-sm text-destructive" role="alert">

@@ -9,7 +9,7 @@ import 'server-only'
  * before the key is added.
  */
 
-// Who notifications about new inquiries/orders go to.
+// Who notifications about new enquiries/orders go to.
 export const NOTIFY_EMAIL =
   process.env.NOTIFY_EMAIL || 'islandadventuresmadagascar@gmail.com'
 
