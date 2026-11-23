@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Plus, X, ZoomIn } from 'lucide-react'
 import { useCart } from '@/components/cart-context'
 import { formatEur, type Product } from '@/lib/products'
 import { ShopPriceAlt } from '@/components/shop-price'
+import { useT } from '@/lib/i18n/context'
 
 function galleryFor(product: Product): string[] {
   const urls = [product.image, product.image2, product.image3].filter(
@@ -15,9 +16,12 @@ function galleryFor(product: Product): string[] {
 
 export function ProductCard({ product }: { product: Product }) {
   const { addItem } = useCart()
+  const t = useT()
   const [photoIndex, setPhotoIndex] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [descOpen, setDescOpen] = useState(false)
   const titleId = useId()
+  const descTitleId = useId()
   const touchStartX = useRef<number | null>(null)
   const didSwipe = useRef(false)
 
@@ -25,6 +29,7 @@ export function ProductCard({ product }: { product: Product }) {
   const imageSrc = gallery[Math.min(photoIndex, gallery.length - 1)] ?? gallery[0]
   const hasGallery = gallery.length > 1
   const galleryLen = gallery.length
+  const overlayOpen = lightboxOpen || descOpen
 
   const goPrev = () =>
     setPhotoIndex((i) => (i - 1 + galleryLen) % galleryLen)
@@ -35,10 +40,14 @@ export function ProductCard({ product }: { product: Product }) {
   }, [product.id, product.image, product.image2, product.image3])
 
   useEffect(() => {
-    if (!lightboxOpen) return
+    if (!overlayOpen) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setLightboxOpen(false)
-      if (!hasGallery) return
+      if (e.key === 'Escape') {
+        setLightboxOpen(false)
+        setDescOpen(false)
+        return
+      }
+      if (!lightboxOpen || !hasGallery) return
       if (e.key === 'ArrowLeft') {
         setPhotoIndex((i) => (i - 1 + galleryLen) % galleryLen)
       }
@@ -53,7 +62,7 @@ export function ProductCard({ product }: { product: Product }) {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prev
     }
-  }, [lightboxOpen, hasGallery, galleryLen])
+  }, [overlayOpen, lightboxOpen, hasGallery, galleryLen])
 
   const onGalleryTouchStart = (e: TouchEvent) => {
     touchStartX.current = e.touches[0]?.clientX ?? null
@@ -142,9 +151,17 @@ export function ProductCard({ product }: { product: Product }) {
         <h3 className="font-serif text-lg font-medium leading-snug text-foreground">
           {product.name}
         </h3>
-        <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-          {product.description}
-        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setLightboxOpen(false)
+            setDescOpen(true)
+          }}
+          aria-label={t('View full description')}
+          className="mt-2 cursor-pointer rounded-sm text-left text-sm leading-relaxed text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+        >
+          <span className="line-clamp-2">{product.description}</span>
+        </button>
 
         <div className="mt-4 flex items-center justify-between pt-1">
           <div className="flex flex-col">
@@ -195,7 +212,7 @@ export function ProductCard({ product }: { product: Product }) {
               <button
                 type="button"
                 onClick={() => setLightboxOpen(false)}
-                aria-label="Close full image"
+                aria-label={t('Close full image')}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-background/15 text-background transition-colors hover:bg-background/25"
               >
                 <X className="h-5 w-5" strokeWidth={1.5} />
@@ -255,6 +272,43 @@ export function ProductCard({ product }: { product: Product }) {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {descOpen && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm sm:p-8"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={descTitleId}
+          onClick={() => setDescOpen(false)}
+        >
+          <div
+            className="relative flex max-h-full w-full max-w-lg flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex w-full items-center justify-between gap-3">
+              <p
+                id={descTitleId}
+                className="truncate font-serif text-lg text-background sm:text-xl"
+              >
+                {product.name}
+              </p>
+              <button
+                type="button"
+                onClick={() => setDescOpen(false)}
+                aria-label={t('Close full description')}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-background/15 text-background transition-colors hover:bg-background/25"
+              >
+                <X className="h-5 w-5" strokeWidth={1.5} />
+              </button>
+            </div>
+            <div className="max-h-[min(70vh,560px)] overflow-y-auto rounded-xl bg-card p-5 shadow-lg sm:p-6">
+              <p className="whitespace-pre-line text-sm leading-relaxed text-foreground sm:text-base">
+                {product.description}
+              </p>
+            </div>
           </div>
         </div>
       )}
